@@ -31,6 +31,7 @@ class Tabletop(SawyerXYZEnv):
             low_dim=False,
             **kwargs
     ):
+        self.randomize = False
         self.exploration = exploration
         self.quick_init(locals())
         hand_low=(-0.2, 0.4, 0.0)
@@ -160,11 +161,14 @@ class Tabletop(SawyerXYZEnv):
         block_pos = None
         for i in range(3):
             self.targetobj = i
-            init_pos = np.random.uniform(
-                -0.2,
-                0.2,
-                size=(2,),
-            )
+            if self.randomize:
+              init_pos = np.random.uniform(
+                  -0.2,
+                  0.2,
+                  size=(2,),
+              )
+            else:
+              init_pos = [0.1 * (i-1), 0.0]
             self.obj_init_pos = init_pos
             self._set_obj_xyz(self.obj_init_pos)
 

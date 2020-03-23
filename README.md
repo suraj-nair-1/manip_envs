@@ -1,5 +1,5 @@
 # manip_envs
-Manipulation Environments
+Manipulation Environments based on MetaWorld
 
 To use, simply install with 
 ```

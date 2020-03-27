@@ -4,12 +4,16 @@ from gym.spaces import  Dict , Box
 import math
 import os
 import torch
-
 from metaworld.envs.mujoco.sawyer_xyz.base import SawyerXYZEnv
 
 from pyquaternion import Quaternion
 from metaworld.envs.mujoco.utils.rotation import euler2quat
 import cv2
+import imageio
+import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
+from matplotlib.cm import ScalarMappable
+
 
 class Tabletop(SawyerXYZEnv):
     def __init__(
@@ -28,7 +32,11 @@ class Tabletop(SawyerXYZEnv):
             rotMode='rotz',
             problem="rand",
             exploration = "hard",
-            low_dim=False,
+            low_dim=True,
+            filepath="test",
+            max_path_length=50,
+            verbose=1,
+            exploration_only=True,
             **kwargs
     ):
         self.randomize = False
@@ -63,7 +71,7 @@ class Tabletop(SawyerXYZEnv):
         self.epsucc = []
         self.lowdim = low_dim
         self.liftThresh = liftThresh
-        self.max_path_length = 100
+        self.max_path_length = max_path_length
         self.rewMode = rewMode
         self.rotMode = rotMode
         self.hand_init_pos = np.array(hand_init_pos)
@@ -83,15 +91,36 @@ class Tabletop(SawyerXYZEnv):
             self.observation_space = Box(0, 1.0, (64,64,3))
             
         self.goal_space = self.observation_space
+        
+        # Extra
+        self.exploration_only = exploration_only # compute_reward returns 0.0
+        
+        '''For Logging'''
+        self.verbose = verbose
+        if self.verbose:
+            self.filepath = filepath
+            if not os.path.exists(self.filepath):
+                os.makedirs(self.filepath)
+        self.log_freq = 1000
+        self.eps = 0 # num episodes so far (start from 1 for logging simplicity)
+        self.hand_memory = []
+        self.obj_memory0 = []
+        self.obj_memory1 = []
+        self.obj_memory2 = []
+        self.interaction = True # True if you want to log hand-block distances, false otherwise
+        if self.interaction:
+            self.block0_interaction = []
+            self.block1_interaction = []
+            self.block2_interaction = []
 
     @property
     def model_name(self):
-      dirname = os.path.dirname(__file__)
-      if self.exploration == "easy":
-        filename = os.path.join(dirname, "../assets/sawyer_xyz/sawyer_multiobject.xml")
-      else:
-        filename = os.path.join(dirname, "../assets/sawyer_xyz/sawyer_multiobject_hard.xml")
-      return filename
+        dirname = os.path.dirname(__file__)
+        if self.exploration == "easy":
+            filename = os.path.join(dirname, "../assets/sawyer_xyz/sawyer_multiobject.xml")
+        else:
+            filename = os.path.join(dirname, "../assets/sawyer_xyz/sawyer_multiobject_hard.xml")
+        return filename
 
     def step(self, action):
         self.set_xyz_action_rotz(action[:4])
@@ -103,6 +132,26 @@ class Tabletop(SawyerXYZEnv):
         self.curr_path_length +=1
         if self.curr_path_length == self.max_path_length:
             self._reset_hand()
+            
+            ''' For logging '''
+            self.eps += 1
+            if self.verbose:
+                if self.eps == 1:
+                    self.save_gif()
+                if self.eps == 100 or self.eps % self.log_freq == 0:
+                    self.save_distribution()
+                    if self.interaction:
+                        self.save_block_interaction()
+                    # reset the memories
+                    self.hand_memory = []
+                    self.obj_memory0 = []
+                    self.obj_memory1 = []
+                    self.obj_memory2 = []
+                    if self.interaction:
+                        self.block0_interaction = []
+                        self.block1_interaction = []
+                        self.block2_interaction = []
+                    self.save_gif()
             done = True
         else:
             done = False
@@ -112,10 +161,32 @@ class Tabletop(SawyerXYZEnv):
         
         if self.lowdim:
             if goal:
-              return self.goalst
+                return self.goalst
             obj = self.data.qpos[9:]
             gpos = self.get_endeff_pos()
             obs = np.concatenate([gpos, obj])
+            
+            '''For logging'''
+            if self.verbose and (self.eps % self.log_freq == 0 or self.eps == 100):
+                im = self.sim.render(64, 64, camera_name='cam0')
+                cv2.imwrite(self.filepath + '/obs'+str(self.curr_path_length)+'.png', (cv2.cvtColor(im, cv2.COLOR_BGR2RGB)).astype(np.uint8))
+                hand = self.get_endeff_pos()[:3].copy()
+                block0 = self.data.get_geom_xpos('objGeom0')[:3].copy()
+                block1 = self.data.get_geom_xpos('objGeom1')[:3].copy()
+                block2 = self.data.get_geom_xpos('objGeom2')[:3].copy()
+                self.hand_memory.append(hand)
+                self.obj_memory0.append(block0)
+                self.obj_memory1.append(block1)
+                self.obj_memory2.append(block2)
+                
+                if self.interaction:
+                    dist0 = np.linalg.norm(block0 - hand)
+                    dist1 = np.linalg.norm(block1 - hand)
+                    dist2 = np.linalg.norm(block2 - hand)
+                    self.block0_interaction.append(dist0)
+                    self.block1_interaction.append(dist1)
+                    self.block2_interaction.append(dist2)
+            
         else:
             if goal:
                 return self.goalim
@@ -162,18 +233,18 @@ class Tabletop(SawyerXYZEnv):
         for i in range(3):
             self.targetobj = i
             if self.randomize:
-              init_pos = np.random.uniform(
+                init_pos = np.random.uniform(
                   -0.2,
                   0.2,
                   size=(2,),
               )
             else:
-              init_pos = [0.1 * (i-1), 0.0]
+                init_pos = [0.1 * (i-1), 0.0]
             self.obj_init_pos = init_pos
             self._set_obj_xyz(self.obj_init_pos)
 
         for _ in range(100):
-          self.do_simulation([0.0, 0.0])
+            self.do_simulation([0.0, 0.0])
         self.targetobj = np.random.randint(3)
         self.sample_goal()
         self.curr_path_length = 0
@@ -198,6 +269,8 @@ class Tabletop(SawyerXYZEnv):
         return self.data.site_xpos[_id].copy()
 
     def compute_reward(self):
+        if self.exploration_only: # if not goal-conditioned
+            return 0.0
         start_id = 9 + self.targetobj*3
         qpos = self.data.qpos.flat.copy()
         ogpos = qpos[start_id:(start_id+2)]
@@ -207,9 +280,9 @@ class Tabletop(SawyerXYZEnv):
     def is_goal(self):
         d = self.compute_reward()
         if (d < 0.08):
-          return 1
+            return 1
         else:
-          return 0
+            return 0
         
     def get_diagnostics(self, paths, prefix=''):
         statistics = OrderedDict()
@@ -217,3 +290,130 @@ class Tabletop(SawyerXYZEnv):
 
     def log_diagnostics(self, paths = None, logger = None):
         pass
+    
+    
+    ''' Logging Code: Saves gifs of every log_freq episode, heat maps of gripper and block positions, and plots
+        of gripper-block distances. 
+    '''
+    def save_img(self, PATH, eps, step):
+        im = self.sim.render(64, 64, camera_name ='cam0')
+        return im
+        cv2.imwrite(PATH + 'eps' + str(eps) + 'step' + str(step) + '.png', (cv2.cvtColor(im, cv2.COLOR_BGR2RGB)).astype(np.uint8))
+
+    def save_goal_img(self, PATH, goal, eps):
+        self.targetobj = 0
+        self.obj_init_pos = goal[:3]
+        self._set_obj_xyz(self.obj_init_pos)
+        im = self.sim.render(64, 64, camera_name='cam0')
+        return im
+        if not cv2.imwrite(PATH + 'goal' + str(eps) + '.png', (cv2.cvtColor(im, cv2.COLOR_BGR2RGB)).astype(np.uint8)):
+            raise Exception('Could not write image')
+    
+    def save_gif(self):
+        ''' Saves the gif of an episode.
+        '''
+        with imageio.get_writer(
+                self.filepath + '/Eps' + str(self.eps) + '.gif', mode='I') as writer:
+            for i in range(self.max_path_length):
+                img_path = self.filepath + '/obs' + str(i) + '.png'
+                writer.append_data(imageio.imread(img_path))
+                
+    def save_distribution(self):
+        ''' Saves the heat maps for hand and block positions.
+        '''
+        def draw(var_type, var1, var2, name1, name2):
+            if name1 == 'X' and name2 == 'Y':
+                if var_type == 0:
+                    val_range = [[-0.2, 0.2],[0.4, 0.8]]
+                else:
+                    val_range = [[-0.3, 0.3],[0.4, 0.8]]
+            if name1 == 'X' and name2 == 'Z':
+                if var_type == 0:
+                    val_range = [[-0.2, 0.2], [0.0, 0.2]]
+                else:
+                    val_range = [[-0.3, 0.3], [0.0, 0.3]]
+            if name1 == 'Y' and name2 =='Z':
+                if var_type == 0:
+                    val_range = [[0.4, 0.8], [0.0, 0.2]]
+                else:
+                    val_range = [[0.4, 0.8], [0.0, 0.3]]
+            # transform to density
+            H, xedges, yedges = np.histogram2d(var1, var2, bins=8, range=val_range, density=False)
+            H = H / sum(sum(H))
+
+            # set consistent color bar
+            Xrange = np.linspace(xedges[0], xedges[-1], 9)
+            Yrange = np.linspace(yedges[0], yedges[-1], 9)
+            ax2dhist = plt.axes()
+            bounds = np.linspace(0.0, 1.0, 25)
+            colors = plt.get_cmap('viridis')(np.linspace(0, 1, len(bounds)+1))
+            cmap = mcolors.ListedColormap(colors[1:-1])
+            cmap.set_over(colors[-1])
+            cmap.set_under(colors[0])
+            norm = mcolors.BoundaryNorm(boundaries=bounds, ncolors=len(bounds)-1)
+            X, Y = np.meshgrid(Xrange, Yrange)
+            ax2dhist.pcolormesh(X, Y, H, cmap=cmap)
+            sm = ScalarMappable(norm=norm, cmap=cmap)
+            sm.set_array([])
+            plt.colorbar(sm)
+            if var_type == 0:
+                var = 'gripper'
+            elif var_type == 1:
+                var = 'block0'
+            elif var_type == 2:
+                var = 'block1'
+            else:
+                var = 'block2'
+     
+            name = name1 + name2 + var + 'pos' + str(int(self.eps))
+            plt.title(name)
+            plt.savefig(self.filepath + '/' + name + '.png', bbox_inches='tight')
+            plt.close()
+        
+        # 0: gripper, 1: block0, 2: block1, 3: block2
+        for i in range(4):
+            if i == 0:
+                memory = np.stack(self.hand_memory)
+            elif i == 1:
+                memory = np.stack(self.obj_memory0)
+            elif i == 2:
+                memory = np.stack(self.obj_memory1)
+            elif i == 3:
+                memory = np.stack(self.obj_memory2)
+            x = memory[:,0]
+            y = memory[:,1]
+            z = memory[:,2]
+            draw(i, x, y, 'X', 'Y')
+            if i == 0:
+                draw(i, x, z, 'X', 'Z')
+                draw(i, y, z, 'Y', 'Z')
+                
+                
+    def save_block_interaction(self):
+        '''Saves the block interaction (i.e. distance between gripper and block for each block) for an episode.'''
+        name = 'GripperBlockDistance' + str(int(self.eps))
+#         plt.title(name)
+#         plt.plot(self.block0_interaction)
+#         plt.savefig(self.filepath + '/' + name + '.png')
+#         plt.close()
+#         name = 'GripperBlock1Distance' + str(int(self.eps))
+#         plt.title(name)
+#         plt.plot(self.block1_interaction)
+#         plt.savefig(self.filepath + '/' + name + '.png')
+#         plt.close()
+#         name = 'GripperBlock2Distance' + str(int(self.eps))
+#         plt.title(name)
+#         plt.plot(self.block2_interaction)
+#         plt.savefig(self.filepath + '/' + name + '.png')
+#         plt.close()
+        
+        fig = plt.figure()
+        plt.plot(self.block0_interaction, "-b", label="block0", linewidth=0.5)
+        plt.plot(self.block1_interaction, "-r", label="block1", linewidth=0.5)
+        plt.plot(self.block2_interaction, "-o", label="block2", linewidth=0.5)
+        fig.suptitle(name)
+        plt.xlabel('Step')
+        plt.ylabel('Distance')
+        plt.legend(loc="upper right")
+        plt.savefig(self.filepath + '/' + name + '.png')
+        plt.close()

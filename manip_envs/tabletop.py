@@ -33,6 +33,7 @@ class Tabletop(SawyerXYZEnv):
     ):
         self.randomize = False
         self.exploration = exploration
+        self.max_path_length = 50
         self.quick_init(locals())
         hand_low=(-0.2, 0.4, 0.0)
         hand_high=(0.2, 0.8, 0.20)
@@ -41,7 +42,7 @@ class Tabletop(SawyerXYZEnv):
         SawyerXYZEnv.__init__(
             self,
             frame_skip=5,
-            action_scale=1./10,
+            action_scale=1./20,
             hand_low=hand_low,
             hand_high=hand_high,
             model_name=self.model_name,
@@ -61,9 +62,9 @@ class Tabletop(SawyerXYZEnv):
 
         self.epcount = 0
         self.epsucc = []
+        self.imsize= 48
         self.lowdim = low_dim
         self.liftThresh = liftThresh
-        self.max_path_length = 100
         self.rewMode = rewMode
         self.rotMode = rotMode
         self.hand_init_pos = np.array(hand_init_pos)
@@ -78,9 +79,13 @@ class Tabletop(SawyerXYZEnv):
         )
 
         if self.lowdim:
-            self.observation_space = Box(0, 1.0, (3+9,))
+            self.observation_space = Dict({'image_observation':Box(0, 1.0, (3+9,))})
         else:
-            self.observation_space = Box(0, 1.0, (64,64,3))
+            self.observation_space = Dict({
+              'image_observation':Box(0, 1.0, (self.imsize*self.imsize*3, )),
+              'image_desired_goal':Box(0, 1.0, (self.imsize*self.imsize*3, )),
+              'image_achieved_goal':Box(0, 1.0, (self.imsize*self.imsize*3, ))
+            })
             
         self.goal_space = self.observation_space
 
@@ -102,11 +107,27 @@ class Tabletop(SawyerXYZEnv):
         reward  = self.compute_reward()
         self.curr_path_length +=1
         if self.curr_path_length == self.max_path_length:
-            self._reset_hand()
+#             cv2.imwrite("/iris/u/surajn/workspace/rlkit/data/imlogs/"+str(self.epcount)+"finalim.png", 
+#                         (255 * np.swapaxes(ob['image_observation'].reshape(3, self.imsize, self.imsize), 0, 2 )).astype(np.uint8))
+            
+#             self._reset_hand()
+            self.reset()
             done = True
         else:
             done = False
-        return ob, reward, done, {'pos': ob, 'hand': self.get_endeff_pos(), 'success':self.is_goal()}
+        return ob, reward, done, {'green_x': self.data.qpos[9], 
+                                  'green_y': self.data.qpos[10], 
+                                  'green_z': self.data.qpos[11], 
+                                  'pink_x': self.data.qpos[12], 
+                                  'pink_y': self.data.qpos[13], 
+                                  'pink_z': self.data.qpos[14],
+                                  'blue_x': self.data.qpos[15], 
+                                  'blue_y': self.data.qpos[16], 
+                                  'blue_z': self.data.qpos[17],
+                                  'hand_x': self.get_endeff_pos()[0],
+                                  'hand_y': self.get_endeff_pos()[1],
+                                  'hand_z': self.get_endeff_pos()[2],
+                                  'dist': - self.compute_reward()}
    
     def get_obs(self, goal=False):
         
@@ -119,8 +140,10 @@ class Tabletop(SawyerXYZEnv):
         else:
             if goal:
                 return self.goalim
-            im = self.sim.render(64, 64, camera_name="cam0")
-            obs = im
+            im = self.render().flatten()
+            obs = {'image_observation' :im}
+            obs['image_desired_goal'] = self.goalim
+            obs['image_achieved_goal'] = im
         return obs
 
     def _get_info(self):
@@ -136,23 +159,45 @@ class Tabletop(SawyerXYZEnv):
         self.set_state(qpos, qvel)
 
     def render(self, mode=""):
-        return self.sim.render(64, 64, camera_name="cam0")
+        i =  self.sim.render(self.imsize, self.imsize, camera_name="cam0")  / 255.
+        i = np.swapaxes(i, 0, 2)
+        return i
+      
+    def get_goal(self):
+        goal  = {}
+        goal['image_desired_goal'] = self.goalim
+        return goal
+      
+    def set_goal(self, goal):
+        self.goalim = goal
 
     def sample_goal(self):
         start_id = 9 + self.targetobj*3
         qpos = self.data.qpos.flat.copy()
         ogpos = qpos[start_id:(start_id+2)]
         goal_pos = np.random.uniform(
-                -0.3,
-                0.3,
+                -0.2,
+                0.2,
                 size=(2,),
             )
         self._state_goal = goal_pos 
         self._set_obj_xyz(goal_pos) 
-        self.goalim = self.sim.render(64, 64, camera_name="cam0")
+        self.goalim = self.render().flatten()
+#         cv2.imwrite("/iris/u/surajn/workspace/rlkit/data/imlogs/"+str(self.epcount)+"goalim.png", 
+#                         (255 * np.swapaxes(self.goalim.reshape(3, self.imsize, self.imsize), 0, 2 )).astype(np.uint8))
         self.goalst = np.concatenate([self.get_endeff_pos(), self.data.qpos[9:]])
         self._reset_hand()
         self._set_obj_xyz(ogpos)
+      
+    def sample_goals(self, bs):
+        self.reset()
+        ims = []
+        for i in range(bs):
+          self.sample_goal()
+          ims.append(self.goalim)
+        ims = np.stack(ims)
+        return {'image_desired_goal': ims}
+          
 
     def reset_model(self):
         self._reset_hand()
@@ -168,7 +213,7 @@ class Tabletop(SawyerXYZEnv):
                   size=(2,),
               )
             else:
-              init_pos = [0.1 * (i-1), 0.0]
+              init_pos = [0.1 * (i-1), 0.15]
             self.obj_init_pos = init_pos
             self._set_obj_xyz(self.obj_init_pos)
 
@@ -179,6 +224,8 @@ class Tabletop(SawyerXYZEnv):
         self.curr_path_length = 0
         self.epcount += 1
         o = self.get_obs()
+#         cv2.imwrite("/iris/u/surajn/workspace/rlkit/data/imlogs/"+str(self.epcount)+"initim.png", 
+#                         (255 * np.swapaxes(o['image_observation'].reshape(3, self.imsize, self.imsize), 0, 2 )).astype(np.uint8))
         
         #Can try changing this
         return o

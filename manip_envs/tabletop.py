@@ -37,10 +37,12 @@ class Tabletop(SawyerXYZEnv):
             filepath="test",
             max_path_length=50,
             verbose=1,
+            smm=False,
             exploration_only=False,
             **kwargs
     ):
         self.randomize = False
+        self.smm = smm
         self.exploration = exploration
         self.max_path_length = max_path_length
         self.quick_init(locals())
@@ -87,9 +89,12 @@ class Tabletop(SawyerXYZEnv):
         )
 
         if self.lowdim:
-            self.observation_space = Dict({
-              'state_observation':Box(0, 1.0, (3+9,))
-            })
+            if self.smm:
+                self.observation_space = Box(0, 1.0, (3+9,))
+            else: 
+                self.observation_space = Dict({
+                    'state_observation':Box(0, 1.0, (3+9,))
+                })
         else:
             self.observation_space = Dict({
               'image_observation':Box(0, 1.0, (self.imsize*self.imsize*3, )),
@@ -205,7 +210,9 @@ class Tabletop(SawyerXYZEnv):
                     self.block0_interaction.append(dist0)
                     self.block1_interaction.append(dist1)
                     self.block2_interaction.append(dist2)
-            
+            # for smm
+            if self.smm:
+                return obs['state_observation']
         else:
             if goal:
                 return self.goalim

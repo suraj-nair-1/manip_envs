@@ -119,7 +119,7 @@ class Tabletop(SawyerXYZEnv):
         self.obj_memory0 = []
         self.obj_memory1 = []
         self.obj_memory2 = []
-        self.interaction = True # True if you want to log hand-block distances, false otherwise
+        self.interaction = False # True if you want to log hand-block distances, false otherwise
         if self.interaction:
             self.block0_interaction = []
             self.block1_interaction = []
@@ -348,9 +348,33 @@ class Tabletop(SawyerXYZEnv):
         cv2.imwrite(PATH + 'eps' + str(eps) + 'step' + str(step) + '.png', (cv2.cvtColor(im, cv2.COLOR_BGR2RGB)).astype(np.uint8))
 
     def save_goal_img(self, PATH, goal, eps):
-        self.targetobj = 0
-        self.obj_init_pos = goal[:3]
-        self._set_obj_xyz(self.obj_init_pos)
+        '''Saves images with a given goal array of positions for the gripper and blocks.'''
+        print("GOAL pos", goal)
+        for i in range(3):
+            self.targetobj = i
+            self.obj_init_pos = goal[(i+1)*3:((i+1)*3)+2]
+            self._set_obj_xyz(self.obj_init_pos)
+        
+        # Move end effector to green block by repeated action steps
+#         green = self.data.qpos[9:12]
+#         gp = self.get_endeff_pos()  - np.array([0.0, 0.6, 0.0])
+#         action = np.concatenate([green-gp, np.array([np.random.uniform(-np.pi, np.pi), -1])])
+#         while np.linalg.norm((self.get_endeff_pos() - np.array([0.0, 0.6, 0.0])) - green) > 0.02: #step until close to goal
+#             print(self.get_endeff_pos(), goal[:3], np.linalg.norm(self.get_endeff_pos() - goal[:3]))
+#             gp = self.get_endeff_pos()  - np.array([0.0, 0.6, 0.0])
+#             action = np.concatenate([green-gp, np.array([np.random.uniform(-np.pi, np.pi), -1])])
+#             self.step(action)
+            
+        # Move end effector to green block by simulation
+        pos = goal[:3]
+        for _ in range(100):
+            self.data.set_mocap_pos('mocap', pos)
+            self.data.set_mocap_quat('mocap', np.array([1, 0, 1, 0]))
+            self.do_simulation([-1,1], self.frame_skip)
+        rightFinger, leftFinger = self.get_site_pos('rightEndEffector'), self.get_site_pos('leftEndEffector')
+        self.init_fingerCOM  =  (rightFinger + leftFinger)/2
+        self.pickCompleted = False
+        
         im = self.sim.render(64, 64, camera_name='cam0')
         return im
         if not cv2.imwrite(PATH + 'goal' + str(eps) + '.png', (cv2.cvtColor(im, cv2.COLOR_BGR2RGB)).astype(np.uint8)):
@@ -439,25 +463,10 @@ class Tabletop(SawyerXYZEnv):
     def save_block_interaction(self):
         '''Saves the block interaction (i.e. distance between gripper and block for each block) for an episode.'''
         name = 'GripperBlockDistance' + str(int(self.epcount))
-#         plt.title(name)
-#         plt.plot(self.block0_interaction)
-#         plt.savefig(self.filepath + '/' + name + '.png')
-#         plt.close()
-#         name = 'GripperBlock1Distance' + str(int(self.epcount))
-#         plt.title(name)
-#         plt.plot(self.block1_interaction)
-#         plt.savefig(self.filepath + '/' + name + '.png')
-#         plt.close()
-#         name = 'GripperBlock2Distance' + str(int(self.epcount))
-#         plt.title(name)
-#         plt.plot(self.block2_interaction)
-#         plt.savefig(self.filepath + '/' + name + '.png')
-#         plt.close()
-        
         fig = plt.figure()
         plt.plot(self.block0_interaction, "-b", label="block0", linewidth=0.5)
         plt.plot(self.block1_interaction, "-r", label="block1", linewidth=0.5)
-        plt.plot(self.block2_interaction, "-o", label="block2", linewidth=0.5)
+        plt.plot(self.block2_interaction, "-m", label="block2", linewidth=0.5)
         fig.suptitle(name)
         plt.xlabel('Step')
         plt.ylabel('Distance')

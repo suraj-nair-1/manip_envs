@@ -13,6 +13,7 @@ import imageio
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 from matplotlib.cm import ScalarMappable
+import time
 
 
 class Tabletop(SawyerXYZEnv):
@@ -32,11 +33,11 @@ class Tabletop(SawyerXYZEnv):
             rotMode='rotz',
             problem="rand",
             exploration = "hard",
-            low_dim=True,
+            low_dim=False, #True,
             filepath="test",
             max_path_length=10000,
             verbose=1,
-            smm=False,
+            smm=True, #False,
             exploration_only=False,
             **kwargs
     ):
@@ -95,11 +96,15 @@ class Tabletop(SawyerXYZEnv):
                     'state_observation':Box(0, 1.0, (3+9,))
                 })
         else:
-            self.observation_space = Dict({
-              'image_observation':Box(0, 1.0, (self.imsize*self.imsize*3, )),
-              'image_desired_goal':Box(0, 1.0, (self.imsize*self.imsize*3, )),
-              'image_achieved_goal':Box(0, 1.0, (self.imsize*self.imsize*3, ))
-            })
+            if self.smm:
+                self.imsize = 48 #64
+                self.observation_space = Box(0, 1.0, (self.imsize*self.imsize*3, ))
+            else: 
+                self.observation_space = Dict({
+                  'image_observation':Box(0, 1.0, (self.imsize*self.imsize*3, )),
+                  'image_desired_goal':Box(0, 1.0, (self.imsize*self.imsize*3, )),
+                  'image_achieved_goal':Box(0, 1.0, (self.imsize*self.imsize*3, ))
+                })
             
         self.goal_space = self.observation_space
         
@@ -118,7 +123,7 @@ class Tabletop(SawyerXYZEnv):
         self.obj_memory0 = []
         self.obj_memory1 = []
         self.obj_memory2 = []
-        self.interaction = True # True if you want to log hand-block distances, false otherwise
+        self.interaction = False # True if you want to log hand-block distances, false otherwise
         if self.interaction:
             self.block0_interaction = []
             self.block1_interaction = []
@@ -145,11 +150,12 @@ class Tabletop(SawyerXYZEnv):
             self.reset()
             
             ''' For logging '''
+#             start = time.time()
             self.epcount += 1
             if self.verbose:
-                if self.epcount == 1:
-                    self.save_gif()
-                if self.epcount == 100 or self.epcount % self.log_freq == 0:
+#                 if self.epcount == 1:
+#                     self.save_gif()
+                if self.epcount == 10 or self.epcount % self.log_freq == 0:
                     self.save_distribution()
                     if self.interaction:
                         self.save_block_interaction()
@@ -163,6 +169,8 @@ class Tabletop(SawyerXYZEnv):
                         self.block1_interaction = []
                         self.block2_interaction = []
                     self.save_gif()
+#             end = time.time()
+#             print("Time to save distribution and block interaction", end - start)
             done = True
         else:
             done = False
@@ -198,7 +206,7 @@ class Tabletop(SawyerXYZEnv):
                                   'dist': - self.compute_reward()}
    
     def get_obs(self, goal=False):
-        
+
         if self.lowdim:
             if goal:
                 return self.goalst
@@ -207,7 +215,7 @@ class Tabletop(SawyerXYZEnv):
             obs = {'state_observation' :np.concatenate([gpos, obj])}
             
             '''For logging'''
-            if self.verbose and (self.epcount % self.log_freq == 0 or self.epcount == 100):
+            if self.verbose and (self.epcount % self.log_freq == 0 or self.epcount == 10):
                 im = self.sim.render(64, 64, camera_name='cam0')
                 cv2.imwrite(self.filepath + '/obs'+str(self.curr_path_length)+'.png', (cv2.cvtColor(im, cv2.COLOR_BGR2RGB)).astype(np.uint8))
                 hand = self.get_endeff_pos()[:3].copy()
@@ -236,6 +244,7 @@ class Tabletop(SawyerXYZEnv):
             obs = {'image_observation' :im}
             obs['image_desired_goal'] = self.goalim
             obs['image_achieved_goal'] = im
+            
         return obs
 
     def _get_info(self):
@@ -370,9 +379,33 @@ class Tabletop(SawyerXYZEnv):
         cv2.imwrite(PATH + 'eps' + str(eps) + 'step' + str(step) + '.png', (cv2.cvtColor(im, cv2.COLOR_BGR2RGB)).astype(np.uint8))
 
     def save_goal_img(self, PATH, goal, eps):
-        self.targetobj = 0
-        self.obj_init_pos = goal[:3]
-        self._set_obj_xyz(self.obj_init_pos)
+        '''Saves images with a given goal array of positions for the gripper and blocks.'''
+        print("GOAL pos", goal)
+        for i in range(3):
+            self.targetobj = i
+            self.obj_init_pos = goal[(i+1)*3:((i+1)*3)+2]
+            self._set_obj_xyz(self.obj_init_pos)
+        
+        # Move end effector to green block by repeated action steps
+#         green = self.data.qpos[9:12]
+#         gp = self.get_endeff_pos()  - np.array([0.0, 0.6, 0.0])
+#         action = np.concatenate([green-gp, np.array([np.random.uniform(-np.pi, np.pi), -1])])
+#         while np.linalg.norm((self.get_endeff_pos() - np.array([0.0, 0.6, 0.0])) - green) > 0.02: #step until close to goal
+#             print(self.get_endeff_pos(), goal[:3], np.linalg.norm(self.get_endeff_pos() - goal[:3]))
+#             gp = self.get_endeff_pos()  - np.array([0.0, 0.6, 0.0])
+#             action = np.concatenate([green-gp, np.array([np.random.uniform(-np.pi, np.pi), -1])])
+#             self.step(action)
+            
+        # Move end effector to green block by simulation
+        pos = goal[:3]
+        for _ in range(100):
+            self.data.set_mocap_pos('mocap', pos)
+            self.data.set_mocap_quat('mocap', np.array([1, 0, 1, 0]))
+            self.do_simulation([-1,1], self.frame_skip)
+        rightFinger, leftFinger = self.get_site_pos('rightEndEffector'), self.get_site_pos('leftEndEffector')
+        self.init_fingerCOM  =  (rightFinger + leftFinger)/2
+        self.pickCompleted = False
+        
         im = self.sim.render(64, 64, camera_name='cam0')
         return im
         if not cv2.imwrite(PATH + 'goal' + str(eps) + '.png', (cv2.cvtColor(im, cv2.COLOR_BGR2RGB)).astype(np.uint8)):
@@ -395,7 +428,7 @@ class Tabletop(SawyerXYZEnv):
                 if var_type == 0:
                     val_range = [[-0.2, 0.2],[0.4, 0.8]]
                 else:
-                    val_range = [[-0.3, 0.3],[0.4, 0.8]]
+                    val_range = [[-0.3, 0.4],[-0.2, 0.3]]
             if name1 == 'X' and name2 == 'Z':
                 if var_type == 0:
                     val_range = [[-0.2, 0.2], [0.0, 0.2]]
@@ -405,14 +438,18 @@ class Tabletop(SawyerXYZEnv):
                 if var_type == 0:
                     val_range = [[0.4, 0.8], [0.0, 0.2]]
                 else:
-                    val_range = [[0.4, 0.8], [0.0, 0.3]]
+                    val_range = [[-0.2, 0.3], [0.0, 0.3]]
             # transform to density
-            H, xedges, yedges = np.histogram2d(var1, var2, bins=8, range=val_range, density=False)
+            
+            Xrange = np.arange(val_range[0][0]-0.05, val_range[0][1]+0.05, 0.05)
+            Yrange = np.arange(val_range[1][0]-0.05, val_range[1][1]+0.05, 0.05)
+            bins = Xrange, Yrange
+            var1 = list(var1)
+            var2 = list(var2)
+            H, xedges, yedges = np.histogram2d(var1, var2, bins=bins, range=val_range, density=False)
             H = H / sum(sum(H))
 
             # set consistent color bar
-            Xrange = np.linspace(xedges[0], xedges[-1], 9)
-            Yrange = np.linspace(yedges[0], yedges[-1], 9)
             ax2dhist = plt.axes()
             bounds = np.linspace(0.0, 1.0, 25)
             colors = plt.get_cmap('viridis')(np.linspace(0, 1, len(bounds)+1))
@@ -421,8 +458,8 @@ class Tabletop(SawyerXYZEnv):
             cmap.set_under(colors[0])
             norm = mcolors.BoundaryNorm(boundaries=bounds, ncolors=len(bounds)-1)
             X, Y = np.meshgrid(Xrange, Yrange)
-            ax2dhist.pcolormesh(X, Y, H, cmap=cmap)
-            sm = ScalarMappable(norm=norm, cmap=cmap)
+            ax2dhist.pcolormesh(X, Y, np.swapaxes(H,0,1)) #, cmap=cmap)
+            sm = ScalarMappable(norm=norm) #, cmap=cmap)
             sm.set_array([])
             plt.colorbar(sm)
             if var_type == 0:
@@ -451,6 +488,8 @@ class Tabletop(SawyerXYZEnv):
                 memory = np.stack(self.obj_memory2)
             x = memory[:,0]
             y = memory[:,1]
+            if i != 0:
+                y -= 0.6
             z = memory[:,2]
             draw(i, x, y, 'X', 'Y')
             if i == 0:
@@ -461,25 +500,10 @@ class Tabletop(SawyerXYZEnv):
     def save_block_interaction(self):
         '''Saves the block interaction (i.e. distance between gripper and block for each block) for an episode.'''
         name = 'GripperBlockDistance' + str(int(self.epcount))
-#         plt.title(name)
-#         plt.plot(self.block0_interaction)
-#         plt.savefig(self.filepath + '/' + name + '.png')
-#         plt.close()
-#         name = 'GripperBlock1Distance' + str(int(self.epcount))
-#         plt.title(name)
-#         plt.plot(self.block1_interaction)
-#         plt.savefig(self.filepath + '/' + name + '.png')
-#         plt.close()
-#         name = 'GripperBlock2Distance' + str(int(self.epcount))
-#         plt.title(name)
-#         plt.plot(self.block2_interaction)
-#         plt.savefig(self.filepath + '/' + name + '.png')
-#         plt.close()
-        
         fig = plt.figure()
         plt.plot(self.block0_interaction, "-b", label="block0", linewidth=0.5)
         plt.plot(self.block1_interaction, "-r", label="block1", linewidth=0.5)
-        plt.plot(self.block2_interaction, "-o", label="block2", linewidth=0.5)
+        plt.plot(self.block2_interaction, "-m", label="block2", linewidth=0.5)
         fig.suptitle(name)
         plt.xlabel('Step')
         plt.ylabel('Distance')

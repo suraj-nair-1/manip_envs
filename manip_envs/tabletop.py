@@ -1,4 +1,3 @@
-print("CCCCCC")
 from collections import OrderedDict
 import numpy as np
 from gym.spaces import  Dict , Box
@@ -35,7 +34,7 @@ class Tabletop(SawyerXYZEnv):
             exploration = "hard",
             low_dim=True,
             filepath="test",
-            max_path_length=50,
+            max_path_length=10000,
             verbose=1,
             smm=False,
             exploration_only=False,
@@ -167,7 +166,11 @@ class Tabletop(SawyerXYZEnv):
             done = True
         else:
             done = False
-        return ob, reward, done, {'green_x': self.data.qpos[9], 
+        # this doesn't actually reset the gripper,
+        # only returns the gripper quat
+        hand_quat = self._reset_hand(find_val=True)[0]
+        return ob, reward, done, {'terminal': done,
+                                  'green_x': self.data.qpos[9], 
                                   'green_y': self.data.qpos[10], 
                                   'green_z': self.data.qpos[11], 
                                   'pink_x': self.data.qpos[12], 
@@ -176,6 +179,19 @@ class Tabletop(SawyerXYZEnv):
                                   'blue_x': self.data.qpos[15], 
                                   'blue_y': self.data.qpos[16], 
                                   'blue_z': self.data.qpos[17],
+                                  'green_dx': self.data.qvel[9],
+                                  'green_dy': self.data.qvel[10],
+                                  'green_dz': self.data.qvel[11],
+                                  'pink_dx': self.data.qvel[12],
+                                  'pink_dy': self.data.qvel[13],
+                                  'pink_dz': self.data.qvel[14],
+                                  'blue_dx': self.data.qvel[15],
+                                  'blue_dy': self.data.qvel[16],
+                                  'blue_dz': self.data.qvel[17],
+                                  'hand_q1': hand_quat[0],
+                                  'hand_q2': hand_quat[1],
+                                  'hand_q3': hand_quat[2],
+                                  'hand_q4': hand_quat[3],
                                   'hand_x': self.get_endeff_pos()[0],
                                   'hand_y': self.get_endeff_pos()[1],
                                   'hand_z': self.get_endeff_pos()[2],
@@ -301,15 +317,21 @@ class Tabletop(SawyerXYZEnv):
         #Can try changing this
         return o
 
-    def _reset_hand(self):
-        pos = self.hand_init_pos.copy()
-        for _ in range(10):
-            self.data.set_mocap_pos('mocap', pos)
-            self.data.set_mocap_quat('mocap', np.array([1, 0, 1, 0]))
-            self.do_simulation([-1,1], self.frame_skip)
-        rightFinger, leftFinger = self.get_site_pos('rightEndEffector'), self.get_site_pos('leftEndEffector')
-        self.init_fingerCOM  =  (rightFinger + leftFinger)/2
-        self.pickCompleted = False
+    def _reset_hand(self, find_val=False, fixed=False, grip_pos=None):
+        if find_val:
+            return self.data.mocap_quat
+        else:
+            if fixed:
+                pos = grip_pos
+            else:
+                pos = self.hand_init_pos.copy()
+            for _ in range(10):
+                self.data.set_mocap_pos('mocap', pos)
+                self.data.set_mocap_quat('mocap', np.array([1, 0, 1, 0]))
+                self.do_simulation([-1,1], self.frame_skip)
+            rightFinger, leftFinger = self.get_site_pos('rightEndEffector'), self.get_site_pos('leftEndEffector')
+            self.init_fingerCOM  =  (rightFinger + leftFinger)/2
+            self.pickCompleted = False
 
     def get_site_pos(self, siteName):
         _id = self.model.site_names.index(siteName)

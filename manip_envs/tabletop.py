@@ -90,10 +90,13 @@ class Tabletop(SawyerXYZEnv):
 
         if self.lowdim:
             if self.smm:
-                self.observation_space = Box(0, 1.0, (3+9,))
+                # Observations are : gripper xyz, block0 xyz, block1 xyz, block2 xyz, 
+                    # block0 dxdydz, block1 dxdydz, block2 dxdydz, gripper quat, gripper left and right
+                # Total dim: 3 + 4 + 2 + 6 + 6 + 6 = 27
+                self.observation_space = Box(0, 1.0, (27,))
             else: 
                 self.observation_space = Dict({
-                    'state_observation':Box(0, 1.0, (3+9,))
+                    'state_observation':Box(0, 1.0, (27,))
                 })
         else:
             if self.smm:
@@ -176,9 +179,7 @@ class Tabletop(SawyerXYZEnv):
             done = False
         # this doesn't actually reset the gripper,
         # only returns the gripper quat
-        hand_quat = self._reset_hand(find_val=True)[0]
-        return ob, reward, done, {'terminal': done,
-                                  'green_x': self.data.qpos[9], 
+        return ob, reward, done, {'green_x': self.data.qpos[9], 
                                   'green_y': self.data.qpos[10], 
                                   'green_z': self.data.qpos[11], 
                                   'pink_x': self.data.qpos[12], 
@@ -187,32 +188,24 @@ class Tabletop(SawyerXYZEnv):
                                   'blue_x': self.data.qpos[15], 
                                   'blue_y': self.data.qpos[16], 
                                   'blue_z': self.data.qpos[17],
-                                  'green_dx': self.data.qvel[9],
-                                  'green_dy': self.data.qvel[10],
-                                  'green_dz': self.data.qvel[11],
-                                  'pink_dx': self.data.qvel[12],
-                                  'pink_dy': self.data.qvel[13],
-                                  'pink_dz': self.data.qvel[14],
-                                  'blue_dx': self.data.qvel[15],
-                                  'blue_dy': self.data.qvel[16],
-                                  'blue_dz': self.data.qvel[17],
-                                  'hand_q1': hand_quat[0],
-                                  'hand_q2': hand_quat[1],
-                                  'hand_q3': hand_quat[2],
-                                  'hand_q4': hand_quat[3],
                                   'hand_x': self.get_endeff_pos()[0],
                                   'hand_y': self.get_endeff_pos()[1],
                                   'hand_z': self.get_endeff_pos()[2],
                                   'dist': - self.compute_reward()}
    
     def get_obs(self, goal=False):
-
         if self.lowdim:
             if goal:
                 return self.goalst
-            obj = self.data.qpos[9:]
             gpos = self.get_endeff_pos()
-            obs = {'state_observation' :np.concatenate([gpos, obj])}
+            gquat = self.data.mocap_quat[0]
+            gleft = self.data.qpos[7]
+            gright = self.data.qpos[8]
+            objpos = self.data.qpos[9:18]
+            objvel = self.data.qvel[9:18]
+            obs = np.concatenate([gpos, objpos, objvel, gquat, np.array([gleft]), np.array([gright])])
+            
+            obs = {'state_observation' :obs}
             
             '''For logging'''
             if self.verbose and (self.epcount % self.log_freq == 0 or self.epcount == 10):
@@ -326,21 +319,32 @@ class Tabletop(SawyerXYZEnv):
         #Can try changing this
         return o
 
-    def _reset_hand(self, find_val=False, fixed=False, grip_pos=None):
-        if find_val:
-            return self.data.mocap_quat
+    def _reset_hand(self, fixed=False, grip_pos=None):
+        if fixed:
+            pos = grip_pos
         else:
-            if fixed:
-                pos = grip_pos
-            else:
-                pos = self.hand_init_pos.copy()
-            for _ in range(10):
-                self.data.set_mocap_pos('mocap', pos)
-                self.data.set_mocap_quat('mocap', np.array([1, 0, 1, 0]))
-                self.do_simulation([-1,1], self.frame_skip)
-            rightFinger, leftFinger = self.get_site_pos('rightEndEffector'), self.get_site_pos('leftEndEffector')
-            self.init_fingerCOM  =  (rightFinger + leftFinger)/2
-            self.pickCompleted = False
+            pos = self.hand_init_pos.copy()
+        for _ in range(10):
+            self.data.set_mocap_pos('mocap', pos)
+            self.data.set_mocap_quat('mocap', np.array([1, 0, 1, 0]))
+            self.do_simulation([-1,1], self.frame_skip)
+        rightFinger, leftFinger = self.get_site_pos('rightEndEffector'), self.get_site_pos('leftEndEffector')
+        self.init_fingerCOM  =  (rightFinger + leftFinger)/2
+        self.pickCompleted = False
+            
+    def reset_hand(self, grip_quat, fixed=False, grip_pos=None):
+        '''If need to fix grip_quat position, use this.'''
+        if fixed:
+            pos = grip_pos
+        else:
+            pos = self.hand_init_pos.copy()
+        for _ in range(100):
+            self.data.set_mocap_pos('mocap', pos)
+            self.data.set_mocap_quat('mocap', grip_quat)
+            self.do_simulation([-1,1], self.frame_skip)
+        rightFinger, leftFinger = self.get_site_pos('rightEndEffector'), self.get_site_pos('leftEndEffector')
+        self.init_fingerCOM  =  (rightFinger + leftFinger)/2
+        self.pickCompleted = False
 
     def get_site_pos(self, siteName):
         _id = self.model.site_names.index(siteName)

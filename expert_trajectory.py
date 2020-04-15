@@ -32,7 +32,7 @@ def init_env(env, args, savedir):
     i = 0
     while True:
         full_obs.append(obs)
-        block = env.data.qpos[9:12] + np.array([0.0, 0.0, 0.1])
+        block = env.data.qpos[9:12] + np.array([0.0, 0.0, 0.1]) #??
         gripper = env.get_endeff_pos() - np.array([0.0, 0.6, 0.05])
         act = np.concatenate([block - gripper, np.array([np.random.uniform(-np.pi, np.pi), -1])], -1)
         full_acts.append(act)
@@ -52,6 +52,56 @@ def init_env(env, args, savedir):
             print('finished env init')
             break
 
+def run_env2(env, init_acts, acts, eps, savedir):
+    env.reset()
+    full_obs = []
+    info = {}
+    for (i, act) in enumerate(init_acts):
+        _, _, _, info = env.step(act)
+    obs = np.array([info['hand_x'],info['hand_y'],info['hand_z']])
+    obs = np.concatenate((obs, np.array([ info['hand_q1'], info['hand_q2'], info['hand_q3'], info['hand_q4'] ]) ),-1)
+    colors = ['green','pink','blue']
+    for c in colors:
+        x = info[str(c)+'_x']
+        y = info[str(c)+'_y']
+        z = info[str(c)+'_z']
+        dx = info[str(c)+'_dx']
+        dy = info[str(c)+'_dy']
+        dz = info[str(c)+'_dz']
+        block_state = np.array([x,y,z,dx,dy,dz])
+        obs = np.concatenate((obs,block_state),-1)
+    full_obs.append(obs)
+    #im = env.save_img(savedir, '', '')
+    #DIR = savedir + str(eps)
+    #if not os.path.exists(DIR):
+    #    os.mkdir(DIR)
+    #cv2.imwrite(DIR + '/obs0' + '.png', (cv2.cvtColor(im, cv2.COLOR_BGR2RGB)).astype(np.uint8))
+    
+    for (i, act) in enumerate(acts):
+        _, _, _, info = env.step(act)
+        obs = np.array([info['hand_x'],info['hand_y'],info['hand_z']])
+        obs = np.concatenate((obs, np.array([info['hand_q1'],info['hand_q2'],info['hand_q3'],info['hand_q4']])),-1)
+        colors = ['green','pink','blue']
+        for c in colors:
+            x = info[str(c)+'_x']
+            y = info[str(c)+'_y']
+            z = info[str(c)+'_z']
+            dx = info[str(c)+'_dx']
+            dy = info[str(c)+'_dy']
+            dz = info[str(c)+'_dz']
+            block_state = np.array([x,y,z,dx,dy,dz])
+            obs = np.concatenate((obs,block_state),-1)
+        full_obs.append(obs)
+        #im = env.save_img(DIR, '', '')
+        #if not os.path.exists(DIR):
+        #    os.mkdir(DIR)
+        #cv2.imwrite(DIR + '/obs' + str(i+1) + '.png', (cv2.cvtColor(im, cv2.COLOR_BGR2RGB)).astype(np.uint8))
+    
+    ## save as gif ##
+    #with imageio.get_writer(DIR + '/expert.gif', mode='I') as writer:
+    #    for i in range(11):
+    #        writer.append_data(imageio.imread(DIR + '/obs' + str(i) + '.png'))
+    return full_obs
 
 def run_env(env, args, expert_obs, expert_acts, eps, savedir):
     #'/iris/u/hjnam/task_exp/our-smm/manip_envs/expert_fewer/'
@@ -108,7 +158,27 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     env = Tabletop(low_dim=True, smm=True, exploration_only=True, verbose=0)
-    savedir = '/iris/u/hjnam/task_exp/our-smm/manip_envs/expert/'
+    savedir = '/iris/u/asc8/taskexp/our-smm/manip_envs/expert/'
+    init = pickle.load(open(savedir + 'init.p','rb'))
+    init_act = init['full acts']
+    expert = pickle.load(open(savedir + 'expert.p','rb'))
+    acts = expert['acts']
+    obs = []
+    acts = []
+    savedir += 'full'
+    if not os.path.exists(savedir):
+        os.mkdir(savedir)
+    for eps in range(acts.shape[0]):
+        full_obs = run_env2(env, init_act, acts[eps,:,:], eps, savedir)
+        obs.append(np.array(full_obs))
+        print('finished', eps)
+    obs = np.array(obs)
+    expert = {}
+    expert['obs'] = np.array(obs)
+    expert['acts'] = np.array(acts)
+    pickle.dump(obs, open(savedir + 'expert_full.p', 'wb'))
+    assert(False)
+
     if not os.path.exists(savedir):
         os.mkdir(savedir)
     init_env(env, args, savedir)

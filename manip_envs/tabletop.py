@@ -91,12 +91,12 @@ class Tabletop(SawyerXYZEnv):
         if self.lowdim:
             if self.smm:
                 # Observations are : gripper xyz, block0 xyz, block1 xyz, block2 xyz, 
-                    # block0 dxdydz, block1 dxdydz, block2 dxdydz, gripper quat, gripper left and right
-                # Total dim: 3 + 4 + 2 + 6 + 6 + 6 = 27
-                self.observation_space = Box(0, 1.0, (27,))
+                    # block0 dxdydz, block1 dxdydz, block2 dxdydz, gripper left and right, gripper z joint
+                # Total dim: 3 + 9 + 9 + 2 + 1 = 24
+                self.observation_space = Box(0, 1.0, (24,))
             else: 
                 self.observation_space = Dict({
-                    'state_observation':Box(0, 1.0, (27,))
+                    'state_observation':Box(0, 1.0, (24,))
                 })
         else:
             if self.smm:
@@ -201,9 +201,10 @@ class Tabletop(SawyerXYZEnv):
             gquat = self.data.mocap_quat[0]
             gleft = self.data.qpos[7]
             gright = self.data.qpos[8]
+            zjoint = self.data.qpos[6]
             objpos = self.data.qpos[9:18]
             objvel = self.data.qvel[9:18]
-            obs = np.concatenate([gpos, objpos, objvel, gquat, np.array([gleft]), np.array([gright])])
+            obs = np.concatenate([gpos, objpos, objvel, np.array([gleft]), np.array([gright]), np.array([zjoint])])
             
             obs = {'state_observation' :obs}
             

@@ -158,7 +158,7 @@ class Tabletop(SawyerXYZEnv):
             if self.verbose:
 #                 if self.epcount == 1:
 #                     self.save_gif()
-                if self.epcount == 10 or self.epcount % self.log_freq == 0:
+                if self.epcount == 10 or self.epcount % self.log_freq == 0 or self.epcount == 20:
                     self.save_distribution()
                     if self.interaction:
                         self.save_block_interaction()
@@ -209,7 +209,8 @@ class Tabletop(SawyerXYZEnv):
             obs = {'state_observation' :obs}
             
             '''For logging'''
-            if self.verbose and (self.epcount % self.log_freq == 0 or self.epcount == 10):
+            if self.verbose and (self.epcount % self.log_freq == 0 or self.epcount == 10 or self.epcount == 20):
+#                 print("Epcount", self.epcount, "curr path length", self.curr_path_length)
                 im = self.sim.render(64, 64, camera_name='cam0')
                 cv2.imwrite(self.filepath + '/obs'+str(self.curr_path_length)+'.png', (cv2.cvtColor(im, cv2.COLOR_BGR2RGB)).astype(np.uint8))
                 hand = self.get_endeff_pos()[:3].copy()
@@ -383,23 +384,37 @@ class Tabletop(SawyerXYZEnv):
         return im
         cv2.imwrite(PATH + 'eps' + str(eps) + 'step' + str(step) + '.png', (cv2.cvtColor(im, cv2.COLOR_BGR2RGB)).astype(np.uint8))
 
+    
+    def take_steps_and_render(self, obs, actions):
+        '''Returns image after having taken actions from obs.'''
+        for i in range(3):
+            self.targetobj = i
+            self.obj_init_pos = obs[(i+1)*3:((i+1)*3)+2]
+            self._set_obj_xyz(self.obj_init_pos)
+        pos = obs[:3]
+        for _ in range(100): # Move gripper to pos
+            self.data.set_mocap_pos('mocap', pos)
+            self.data.set_mocap_quat('mocap', np.array([1, 0, 1, 0]))
+            self.do_simulation([-1,1], self.frame_skip)
+        rightFinger, leftFinger = self.get_site_pos('rightEndEffector'), self.get_site_pos('leftEndEffector')
+        self.init_fingerCOM  =  (rightFinger + leftFinger)/2
+        self.pickCompleted = False
+        
+        for i in range(actions.shape[0]):
+            action = actions[i]
+            self.set_xyz_action_rotz(action[:4])
+            self.do_simulation([action[-1], -action[-1]])
+            
+        im = self.sim.render(64, 64, camera_name='cam0')
+        return im
+        
+        
     def save_goal_img(self, PATH, goal, eps):
-        '''Saves images with a given goal array of positions for the gripper and blocks.'''
-        print("GOAL pos", goal)
+        '''Returns image with a given goal array of positions for the gripper and blocks.'''
         for i in range(3):
             self.targetobj = i
             self.obj_init_pos = goal[(i+1)*3:((i+1)*3)+2]
             self._set_obj_xyz(self.obj_init_pos)
-        
-        # Move end effector to green block by repeated action steps
-#         green = self.data.qpos[9:12]
-#         gp = self.get_endeff_pos()  - np.array([0.0, 0.6, 0.0])
-#         action = np.concatenate([green-gp, np.array([np.random.uniform(-np.pi, np.pi), -1])])
-#         while np.linalg.norm((self.get_endeff_pos() - np.array([0.0, 0.6, 0.0])) - green) > 0.02: #step until close to goal
-#             print(self.get_endeff_pos(), goal[:3], np.linalg.norm(self.get_endeff_pos() - goal[:3]))
-#             gp = self.get_endeff_pos()  - np.array([0.0, 0.6, 0.0])
-#             action = np.concatenate([green-gp, np.array([np.random.uniform(-np.pi, np.pi), -1])])
-#             self.step(action)
             
         # Move end effector to green block by simulation
         pos = goal[:3]
@@ -413,8 +428,7 @@ class Tabletop(SawyerXYZEnv):
         
         im = self.sim.render(64, 64, camera_name='cam0')
         return im
-        if not cv2.imwrite(PATH + 'goal' + str(eps) + '.png', (cv2.cvtColor(im, cv2.COLOR_BGR2RGB)).astype(np.uint8)):
-            raise Exception('Could not write image')
+
     
     def save_gif(self):
         ''' Saves the gif of an episode.

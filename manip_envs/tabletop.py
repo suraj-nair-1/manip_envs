@@ -5,7 +5,7 @@ import math
 import os
 import torch
 from metaworld.envs.mujoco.sawyer_xyz.base import SawyerXYZEnv
-
+from PIL import Image
 from pyquaternion import Quaternion
 from metaworld.envs.mujoco.utils.rotation import euler2quat
 import cv2
@@ -385,7 +385,7 @@ class Tabletop(SawyerXYZEnv):
         cv2.imwrite(PATH + 'eps' + str(eps) + 'step' + str(step) + '.png', (cv2.cvtColor(im, cv2.COLOR_BGR2RGB)).astype(np.uint8))
 
     
-    def take_steps_and_render(self, obs, actions):
+    def take_steps_and_render(self, obs, actions, savename):
         '''Returns image after having taken actions from obs.'''
         for i in range(3):
             self.targetobj = i
@@ -400,12 +400,23 @@ class Tabletop(SawyerXYZEnv):
         self.init_fingerCOM  =  (rightFinger + leftFinger)/2
         self.pickCompleted = False
         
+        imgs = []
+        im = self.sim.render(64, 64, camera_name='cam0')
+        imgs.append(im)
         for i in range(actions.shape[0]):
             action = actions[i]
             self.set_xyz_action_rotz(action[:4])
             self.do_simulation([action[-1], -action[-1]])
+            im = self.sim.render(64, 64, camera_name='cam0')
+            imgs.append(im)
             
         im = self.sim.render(64, 64, camera_name='cam0')
+        
+        with imageio.get_writer(
+                savename + '.gif', mode='I') as writer:
+            for e in range(actions.shape[0] + 1):
+                writer.append_data(imgs[e]) # for i in range(actions.shape[0] + 1))
+
         return im
         
         

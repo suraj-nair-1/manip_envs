@@ -35,8 +35,9 @@ class Tabletop(SawyerXYZEnv):
             exploration = "hard",
             low_dim=False, #True,
             filepath="test",
-            max_path_length=10000,
+            max_path_length=50,
             verbose=1,
+            log_freq=100, # in terms of episode num
             smm=True, #False,
             exploration_only=False,
             **kwargs
@@ -45,6 +46,7 @@ class Tabletop(SawyerXYZEnv):
         self.smm = smm
         self.exploration = exploration
         self.max_path_length = max_path_length
+        self.cur_path_length = 0
         self.quick_init(locals())
         hand_low=(-0.2, 0.4, 0.0)
         hand_high=(0.2, 0.8, 0.20)
@@ -74,7 +76,6 @@ class Tabletop(SawyerXYZEnv):
         self.imsize= 48
         self.lowdim = low_dim
         self.liftThresh = liftThresh
-        self.max_path_length = max_path_length
         self.rewMode = rewMode
         self.rotMode = rotMode
         self.hand_init_pos = np.array(hand_init_pos)
@@ -120,7 +121,7 @@ class Tabletop(SawyerXYZEnv):
             self.filepath = filepath
             if not os.path.exists(self.filepath):
                 os.makedirs(self.filepath)
-        self.log_freq = 1000
+        self.log_freq = log_freq
         self.epcount = 0 # num episodes so far (start from 1 for logging simplicity)
         self.hand_memory = []
         self.obj_memory0 = []
@@ -148,37 +149,38 @@ class Tabletop(SawyerXYZEnv):
         ob = None
         ob = self.get_obs()
         reward  = self.compute_reward()
-        self.curr_path_length +=1
-        if self.curr_path_length == self.max_path_length:
-            self.reset()
-            
-            ''' For logging '''
-#             start = time.time()
-            self.epcount += 1
-            if self.verbose:
-#                 if self.epcount == 1:
-#                     self.save_gif()
-                if self.epcount == 10 or self.epcount % self.log_freq == 0 or self.epcount == 20:
-                    self.save_distribution()
-                    if self.interaction:
-                        self.save_block_interaction()
-                    # reset the memories
-                    self.hand_memory = []
-                    self.obj_memory0 = []
-                    self.obj_memory1 = []
-                    self.obj_memory2 = []
-                    if self.interaction:
-                        self.block0_interaction = []
-                        self.block1_interaction = []
-                        self.block2_interaction = []
-                    self.save_gif()
-#             end = time.time()
-#             print("Time to save distribution and block interaction", end - start)
+        if self.cur_path_length == self.max_path_length:
             done = True
         else:
             done = False
-        # this doesn't actually reset the gripper,
-        # only returns the gripper quat
+        
+        '''
+        For logging
+        Save object interaction from the past ~self.log_freq episodes
+        Render images from every step if current episode = log_freq_episode
+        '''
+        if self.verbose:
+            hand = self.get_endeff_pos()[:3].copy()
+            block0 = self.data.get_geom_xpos('objGeom0')[:3].copy()
+            block1 = self.data.get_geom_xpos('objGeom1')[:3].copy()
+            block2 = self.data.get_geom_xpos('objGeom2')[:3].copy()
+            self.hand_memory.append(hand)
+            self.obj_memory0.append(block0)
+            self.obj_memory1.append(block1)
+            self.obj_memory2.append(block2)
+                
+            if self.epcount % self.log_freq == 0:
+                im = self.sim.render(64, 64, camera_name='cam0')
+                cv2.imwrite(self.filepath + '/obs'+str(self.cur_path_length)+'.png', (cv2.cvtColor(im, cv2.COLOR_BGR2RGB)).astype(np.uint8))
+                
+            if self.interaction:
+                dist0 = np.linalg.norm(block0 - hand)
+                dist1 = np.linalg.norm(block1 - hand)
+                dist2 = np.linalg.norm(block2 - hand)
+                self.block0_interaction.append(dist0)
+                self.block1_interaction.append(dist1)
+                self.block2_interaction.append(dist2)
+        self.cur_path_length +=1
         return ob, reward, done, {'green_x': self.data.qpos[9], 
                                   'green_y': self.data.qpos[10], 
                                   'green_z': self.data.qpos[11], 
@@ -208,27 +210,6 @@ class Tabletop(SawyerXYZEnv):
             
             obs = {'state_observation' :obs}
             
-            '''For logging'''
-            if self.verbose and (self.epcount % self.log_freq == 0 or self.epcount == 10 or self.epcount == 20):
-#                 print("Epcount", self.epcount, "curr path length", self.curr_path_length)
-                im = self.sim.render(64, 64, camera_name='cam0')
-                cv2.imwrite(self.filepath + '/obs'+str(self.curr_path_length)+'.png', (cv2.cvtColor(im, cv2.COLOR_BGR2RGB)).astype(np.uint8))
-                hand = self.get_endeff_pos()[:3].copy()
-                block0 = self.data.get_geom_xpos('objGeom0')[:3].copy()
-                block1 = self.data.get_geom_xpos('objGeom1')[:3].copy()
-                block2 = self.data.get_geom_xpos('objGeom2')[:3].copy()
-                self.hand_memory.append(hand)
-                self.obj_memory0.append(block0)
-                self.obj_memory1.append(block1)
-                self.obj_memory2.append(block2)
-                
-                if self.interaction:
-                    dist0 = np.linalg.norm(block0 - hand)
-                    dist1 = np.linalg.norm(block1 - hand)
-                    dist2 = np.linalg.norm(block2 - hand)
-                    self.block0_interaction.append(dist0)
-                    self.block1_interaction.append(dist1)
-                    self.block2_interaction.append(dist2)
             # for smm
             if self.smm:
                 return obs['state_observation']
@@ -292,10 +273,39 @@ class Tabletop(SawyerXYZEnv):
         ims = np.stack(ims)
         return {'image_desired_goal': ims}
           
+    def initialize(self):
+        self.epcount = -1 # to ensure the first episode starts with 0 idx
+        self.cur_path_length = 0
+        self.hand_memory = []
+        self.obj_memory0 = []
+        self.obj_memory1 = []
+        self.obj_memory2 = []
+        if self.interaction:
+            self.block0_interaction = []
+            self.block1_interaction = []
+            self.block2_interaction = []
 
     def reset_model(self):
+        ''' For logging '''
+        if self.verbose:
+            if self.epcount % self.log_freq == 0:
+                self.save_distribution()
+                if self.interaction:
+                    self.save_block_interaction()
+                # reset the memories
+                self.hand_memory = []
+                self.obj_memory0 = []
+                self.obj_memory1 = []
+                self.obj_memory2 = []
+                if self.interaction:
+                    self.block0_interaction = []
+                    self.block1_interaction = []
+                    self.block2_interaction = []
+                self.save_gif()
+        self.cur_path_length = 0
         self._reset_hand()
-
+        self.epcount += 1
+        print('Current episode num %d' %self.epcount)
         buffer_dis = 0.04
         block_pos = None
         for i in range(3):
@@ -315,17 +325,14 @@ class Tabletop(SawyerXYZEnv):
             self.do_simulation([0.0, 0.0])
         self.targetobj = np.random.randint(3)
         self.sample_goal()
-        self.curr_path_length = 0
+        self.cur_path_length = 0
         o = self.get_obs()
         
         #Can try changing this
         return o
 
-    def _reset_hand(self, fixed=False, grip_pos=None):
-        if fixed:
-            pos = grip_pos
-        else:
-            pos = self.hand_init_pos.copy()
+    def _reset_hand(self):
+        pos = self.hand_init_pos.copy()
         for _ in range(10):
             self.data.set_mocap_pos('mocap', pos)
             self.data.set_mocap_quat('mocap', np.array([1, 0, 1, 0]))
@@ -333,7 +340,7 @@ class Tabletop(SawyerXYZEnv):
         rightFinger, leftFinger = self.get_site_pos('rightEndEffector'), self.get_site_pos('leftEndEffector')
         self.init_fingerCOM  =  (rightFinger + leftFinger)/2
         self.pickCompleted = False
-            
+
     def reset_hand(self, grip_quat, fixed=False, grip_pos=None):
         '''If need to fix grip_quat position, use this.'''
         if fixed:
@@ -419,7 +426,7 @@ class Tabletop(SawyerXYZEnv):
 
         return im
         
-        
+    
     def save_goal_img(self, PATH, goal, eps):
         '''Returns image with a given goal array of positions for the gripper and blocks.'''
         for i in range(3):

@@ -229,10 +229,15 @@ class Tabletop(SawyerXYZEnv):
     def _set_obj_xyz(self, pos):
         qpos = self.data.qpos.flat.copy()
         qvel = self.data.qvel.flat.copy()
-
+        # print('target ob id')
+        # print(self.targetobj)
+        # print('qpos')
+        # print(qpos)
         start_id = 9 + self.targetobj*3
         qpos[start_id:(start_id+2)] = pos.copy()
         qvel[start_id:(start_id+2)] = 0
+        # print('qpos of interest')
+        # print(qpos[start_id:(start_id+2)])
         self.set_state(qpos, qvel)
 
     def render(self, mode=""):
@@ -305,7 +310,6 @@ class Tabletop(SawyerXYZEnv):
         self.cur_path_length = 0
         self._reset_hand()
         self.epcount += 1
-        print('Current episode num %d' %self.epcount)
         buffer_dis = 0.04
         block_pos = None
         for i in range(3):
@@ -328,6 +332,10 @@ class Tabletop(SawyerXYZEnv):
         self.cur_path_length = 0
         o = self.get_obs()
         
+        if self.epcount % self.log_freq == 0:
+            im = self.sim.render(64, 64, camera_name='cam0')
+            cv2.imwrite(self.filepath + '/init.png', (cv2.cvtColor(im, cv2.COLOR_BGR2RGB)).astype(np.uint8))
+
         #Can try changing this
         return o
 
@@ -394,19 +402,35 @@ class Tabletop(SawyerXYZEnv):
     
     def take_steps_and_render(self, obs, actions, savename):
         '''Returns image after having taken actions from obs.'''
-        for i in range(3):
-            self.targetobj = i
-            self.obj_init_pos = obs[(i+1)*3:((i+1)*3)+2]
-            self._set_obj_xyz(self.obj_init_pos)
-        pos = obs[:3]
-        for _ in range(100): # Move gripper to pos
-            self.data.set_mocap_pos('mocap', pos)
-            self.data.set_mocap_quat('mocap', np.array([1, 0, 1, 0]))
-            self.do_simulation([-1,1], self.frame_skip)
-        rightFinger, leftFinger = self.get_site_pos('rightEndEffector'), self.get_site_pos('leftEndEffector')
-        self.init_fingerCOM  =  (rightFinger + leftFinger)/2
-        self.pickCompleted = False
-        
+        # print("inside take steps and render")
+        threshold = 0.05
+        repeat = True
+        _iters = 0
+        while repeat:
+            for i in range(3):
+                self.targetobj = i
+                self.obj_init_pos = obs[(i+1)*3:((i+1)*3)+2]
+                self._set_obj_xyz(self.obj_init_pos)
+            error = np.linalg.norm(obs[3:12] - self.data.qpos[9:18])
+            repeat = (error >= threshold)
+            _iters += 1
+            if _iters > 10:
+                break
+        repeat = True
+        _iters = 0
+        while repeat:
+            pos = obs[:3]
+            for _ in range(100): # Move gripper to pos
+                self.data.set_mocap_pos('mocap', pos)
+                self.data.set_mocap_quat('mocap', np.array([1, 0, 1, 0]))
+                self.do_simulation([-1,1], self.frame_skip)
+            rightFinger, leftFinger = self.get_site_pos('rightEndEffector'), self.get_site_pos('leftEndEffector')
+            self.init_fingerCOM  =  (rightFinger + leftFinger)/2
+            self.pickCompleted = False
+            error = np.linalg.norm(pos - self.get_endeff_pos())
+            repeat = (error >= threshold)
+            if _iters > 10:
+                break
         imgs = []
         im = self.sim.render(64, 64, camera_name='cam0')
         imgs.append(im)
@@ -422,11 +446,26 @@ class Tabletop(SawyerXYZEnv):
         with imageio.get_writer(
                 savename + '.gif', mode='I') as writer:
             for e in range(actions.shape[0] + 1):
-                writer.append_data(imgs[e]) # for i in range(actions.shape[0] + 1))
-
+                writer.append_data(imgs[e])
         return im
         
-    
+    def _restore(self, obs):
+        for i in range(3):
+            self.targetobj = i
+            self.obj_init_pos = obs[(i+1)*3:((i+1)*3)+2]
+            self._set_obj_xyz(self.obj_init_pos)
+        pos = obs[:3]
+        for _ in range(100): # Move gripper to pos
+            self.data.set_mocap_pos('mocap', pos)
+            self.data.set_mocap_quat('mocap', np.array([1, 0, 1, 0]))
+            self.do_simulation([-1,1], self.frame_skip)
+        rightFinger, leftFinger = self.get_site_pos('rightEndEffector'), self.get_site_pos('leftEndEffector')
+        self.init_fingerCOM  =  (rightFinger + leftFinger)/2
+        self.pickCompleted = False
+        print(self.data.qpos[9:18])
+        imgs = []
+        im = self.sim.render(64, 64, camera_name='cam0')
+
     def save_goal_img(self, PATH, goal, eps):
         '''Returns image with a given goal array of positions for the gripper and blocks.'''
         for i in range(3):
@@ -453,6 +492,7 @@ class Tabletop(SawyerXYZEnv):
         '''
         with imageio.get_writer(
                 self.filepath + '/Eps' + str(self.epcount) + '.gif', mode='I') as writer:
+            writer.append_data(imageio.imread(self.filepath + '/init.png'))
             for i in range(self.max_path_length):
                 img_path = self.filepath + '/obs' + str(i) + '.png'
                 writer.append_data(imageio.imread(img_path))

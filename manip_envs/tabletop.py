@@ -118,6 +118,7 @@ class Tabletop(SawyerXYZEnv):
         '''For Logging'''
         self.verbose = verbose
         if self.verbose:
+            self.imgs = []
             self.filepath = filepath
             if not os.path.exists(self.filepath):
                 os.makedirs(self.filepath)
@@ -171,7 +172,8 @@ class Tabletop(SawyerXYZEnv):
                 
             if self.epcount % self.log_freq == 0:
                 im = self.sim.render(64, 64, camera_name='cam0')
-                cv2.imwrite(self.filepath + '/obs'+str(self.cur_path_length)+'.png', (cv2.cvtColor(im, cv2.COLOR_BGR2RGB)).astype(np.uint8))
+                self.imgs.append(im)
+                # cv2.imwrite(self.filepath + '/obs'+str(self.cur_path_length)+'.png', (cv2.cvtColor(im, cv2.COLOR_BGR2RGB)).astype(np.uint8))
                 
             if self.interaction:
                 dist0 = np.linalg.norm(block0 - hand)
@@ -333,8 +335,10 @@ class Tabletop(SawyerXYZEnv):
         o = self.get_obs()
         
         if self.epcount % self.log_freq == 0:
+            self.imgs = []
             im = self.sim.render(64, 64, camera_name='cam0')
-            cv2.imwrite(self.filepath + '/init.png', (cv2.cvtColor(im, cv2.COLOR_BGR2RGB)).astype(np.uint8))
+            self.imgs.append(im)
+            #cv2.imwrite(self.filepath + '/init.png', (cv2.cvtColor(im, cv2.COLOR_BGR2RGB)).astype(np.uint8))
 
         #Can try changing this
         return o
@@ -397,7 +401,6 @@ class Tabletop(SawyerXYZEnv):
     def save_img(self, PATH, eps, step):
         im = self.sim.render(64, 64, camera_name ='cam0')
         return im
-        cv2.imwrite(PATH + 'eps' + str(eps) + 'step' + str(step) + '.png', (cv2.cvtColor(im, cv2.COLOR_BGR2RGB)).astype(np.uint8))
 
     
     def take_steps_and_render(self, obs, actions, savename):
@@ -490,12 +493,18 @@ class Tabletop(SawyerXYZEnv):
     def save_gif(self):
         ''' Saves the gif of an episode.
         '''
+        
         with imageio.get_writer(
                 self.filepath + '/Eps' + str(self.epcount) + '.gif', mode='I') as writer:
-            writer.append_data(imageio.imread(self.filepath + '/init.png'))
-            for i in range(self.max_path_length):
-                img_path = self.filepath + '/obs' + str(i) + '.png'
-                writer.append_data(imageio.imread(img_path))
+            for i in range(self.max_path_length + 1):
+                writer.append_data(self.imgs[i])
+
+        #with imageio.get_writer(
+        #        self.filepath + '/Eps' + str(self.epcount) + '.gif', mode='I') as writer:
+        #    writer.append_data(imageio.imread(self.filepath + '/init.png'))
+        #    for i in range(self.max_path_length):
+        #        img_path = self.filepath + '/obs' + str(i) + '.png'
+        #        writer.append_data(imageio.imread(img_path))
                 
     def save_distribution(self):
         ''' Saves the heat maps for hand and block positions.

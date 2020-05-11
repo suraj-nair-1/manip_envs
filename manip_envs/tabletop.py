@@ -432,6 +432,7 @@ class Tabletop(SawyerXYZEnv):
             self.pickCompleted = False
             error = np.linalg.norm(pos - self.get_endeff_pos())
             repeat = (error >= threshold)
+            _iters += 1
             if _iters > 10:
                 break
         imgs = []

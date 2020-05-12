@@ -171,7 +171,7 @@ class Tabletop(SawyerXYZEnv):
             self.obj_memory2.append(block2)
                 
             if self.epcount % self.log_freq == 0:
-                im = self.sim.render(64, 64, camera_name='cam0')
+                im = self.sim.render(48, 48, camera_name='cam0')
                 self.imgs.append(im)
                 # cv2.imwrite(self.filepath + '/obs'+str(self.cur_path_length)+'.png', (cv2.cvtColor(im, cv2.COLOR_BGR2RGB)).astype(np.uint8))
                 
@@ -218,7 +218,7 @@ class Tabletop(SawyerXYZEnv):
         else:
             if goal:
                 return self.goalim
-            im = self.render().flatten()
+            im = self.render() #.flatten()
             obs = {'image_observation' :im}
             obs['image_desired_goal'] = self.goalim
             obs['image_achieved_goal'] = im
@@ -339,12 +339,24 @@ class Tabletop(SawyerXYZEnv):
         
         if self.epcount % self.log_freq == 0:
             self.imgs = []
-            im = self.sim.render(64, 64, camera_name='cam0')
+            im = self.sim.render(48, 48, camera_name='cam0')
             self.imgs.append(im)
             #cv2.imwrite(self.filepath + '/init.png', (cv2.cvtColor(im, cv2.COLOR_BGR2RGB)).astype(np.uint8))
 
         #Can try changing this
-        return o
+        return o, {'green_x': self.data.qpos[9], 
+                    'green_y': self.data.qpos[10], 
+                    'green_z': self.data.qpos[11], 
+                    'pink_x': self.data.qpos[12], 
+                    'pink_y': self.data.qpos[13], 
+                    'pink_z': self.data.qpos[14],
+                    'blue_x': self.data.qpos[15], 
+                    'blue_y': self.data.qpos[16], 
+                    'blue_z': self.data.qpos[17],
+                    'hand_x': self.get_endeff_pos()[0],
+                    'hand_y': self.get_endeff_pos()[1],
+                    'hand_z': self.get_endeff_pos()[2],
+                    'dist': - self.compute_reward()}
 
     def _reset_hand(self):
         pos = self.hand_init_pos.copy()
@@ -402,7 +414,7 @@ class Tabletop(SawyerXYZEnv):
         of gripper-block distances. 
     '''
     def save_img(self, PATH, eps, step):
-        im = self.sim.render(64, 64, camera_name ='cam0')
+        im = self.sim.render(48, 48, camera_name ='cam0')
         return im
 
     
@@ -439,16 +451,16 @@ class Tabletop(SawyerXYZEnv):
             if _iters > 10:
                 break
         imgs = []
-        im = self.sim.render(64, 64, camera_name='cam0')
+        im = self.sim.render(48, 48, camera_name='cam0')
         imgs.append(im)
         for i in range(actions.shape[0]):
             action = actions[i]
             self.set_xyz_action_rotz(action[:4])
             self.do_simulation([action[-1], -action[-1]])
-            im = self.sim.render(64, 64, camera_name='cam0')
+            im = self.sim.render(48, 48, camera_name='cam0')
             imgs.append(im)
             
-        im = self.sim.render(64, 64, camera_name='cam0')
+        im = self.sim.render(48, 48, camera_name='cam0')
         
         with imageio.get_writer(
                 savename + '.gif', mode='I') as writer:
@@ -471,7 +483,7 @@ class Tabletop(SawyerXYZEnv):
         self.pickCompleted = False
         print(self.data.qpos[9:18])
         imgs = []
-        im = self.sim.render(64, 64, camera_name='cam0')
+        im = self.sim.render(48, 48, camera_name='cam0')
 
     def save_goal_img(self, PATH, goal, eps):
         '''Returns image with a given goal array of positions for the gripper and blocks.'''
@@ -490,7 +502,7 @@ class Tabletop(SawyerXYZEnv):
         self.init_fingerCOM  =  (rightFinger + leftFinger)/2
         self.pickCompleted = False
         
-        im = self.sim.render(64, 64, camera_name='cam0')
+        im = self.sim.render(48, 48, camera_name='cam0')
         return im
 
     

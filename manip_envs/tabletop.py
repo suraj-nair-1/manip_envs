@@ -223,6 +223,9 @@ class Tabletop(SawyerXYZEnv):
             obs['image_desired_goal'] = self.goalim
             obs['image_achieved_goal'] = im
             
+            if self.smm:
+                return obs['image_observation']
+            
         return obs
 
     def _get_info(self):

@@ -329,9 +329,9 @@ class Tabletop(SawyerXYZEnv):
               )
             elif self._hard:
                 if i == 0:
-                    init_pos = [-.35, .8]
+                    init_pos = [-.25, -0.2] #.8]
                 elif i == 1:
-                    init_pos = [-.25, .3]
+                    init_pos = [-.25, .2]
                 else:
                     init_pos = [ .15, -.2]
             else:

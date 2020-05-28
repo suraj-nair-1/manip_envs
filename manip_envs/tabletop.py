@@ -32,6 +32,7 @@ class Tabletop(SawyerXYZEnv):
             rewMode = 'orig',
             rotMode='rotz',
             problem="rand",
+            door = True, #Add door to the env
             exploration = "hard",
             low_dim=False, #True,
             filepath="test",
@@ -45,6 +46,7 @@ class Tabletop(SawyerXYZEnv):
     ):
         self.randomize = False
         self.smm = smm
+        self.door = door # if True, add door to the env
         self._hard = hard # if True, blocks are initialized to diff corners
         self.exploration = exploration
         self.max_path_length = max_path_length
@@ -142,7 +144,10 @@ class Tabletop(SawyerXYZEnv):
         if self.exploration == "easy":
             filename = os.path.join(dirname, "../assets/sawyer_xyz/sawyer_multiobject.xml")
         else:
-            filename = os.path.join(dirname, "../assets/sawyer_xyz/sawyer_multiobject_hard.xml")
+            if self.door:
+                filename = os.path.join(dirname, "../assets/sawyer_xyz/sawyer_multiobject_door.xml")
+            else:
+                filename = os.path.join(dirname, "../assets/sawyer_xyz/sawyer_multiobject_hard.xml")
         return filename
 
     def step(self, action):

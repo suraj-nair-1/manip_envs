@@ -10,6 +10,8 @@ from pyquaternion import Quaternion
 from metaworld.envs.mujoco.utils.rotation import euler2quat
 import cv2
 import imageio
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 from matplotlib.cm import ScalarMappable
@@ -334,7 +336,7 @@ class Tabletop(SawyerXYZEnv):
               )
             elif self._hard:
                 if i == 0:
-                    init_pos = [-.25, -0.2] #.8]
+                    init_pos = [-.25, -0.2]
                 elif i == 1:
                     init_pos = [-.25, .2]
                 else:

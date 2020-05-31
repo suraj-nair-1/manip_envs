@@ -147,7 +147,7 @@ class Tabletop(SawyerXYZEnv):
             filename = os.path.join(dirname, "../assets/sawyer_xyz/sawyer_multiobject.xml")
         else:
             if self.door:
-                filename = os.path.join(dirname, "../assets/sawyer_xyz/sawyer_multiobject_door.xml")
+                filename = os.path.join(dirname, "../assets/sawyer_xyz/sawyer_multiobject_door_v1.xml")
             else:
                 filename = os.path.join(dirname, "../assets/sawyer_xyz/sawyer_multiobject_hard.xml")
         return filename
@@ -282,7 +282,7 @@ class Tabletop(SawyerXYZEnv):
         self.goalst = np.concatenate([self.get_endeff_pos(), self.data.qpos[9:]])
         self._reset_hand()
         self._set_obj_xyz(ogpos)
-      
+
     def sample_goals(self, bs):
         self.reset()
         ims = []
@@ -346,6 +346,9 @@ class Tabletop(SawyerXYZEnv):
             self.obj_init_pos = init_pos
             self._set_obj_xyz(self.obj_init_pos)
 
+        print("door joint {}".format(self.data.qpos[-1]))
+        self.data.qpos[-1] = -.5
+        
         for _ in range(100):
             self.do_simulation([0.0, 0.0])
         self.targetobj = np.random.randint(3)
@@ -355,7 +358,7 @@ class Tabletop(SawyerXYZEnv):
         
         if self.epcount % self.log_freq == 0:
             self.imgs = []
-            im = self.sim.render(48, 48, camera_name='cam0') #cam0')
+            im = self.sim.render(48, 48, camera_name='cam0')
             self.imgs.append(im)
             #cv2.imwrite(self.filepath + '/init.png', (cv2.cvtColor(im, cv2.COLOR_BGR2RGB)).astype(np.uint8))
 
@@ -430,7 +433,7 @@ class Tabletop(SawyerXYZEnv):
         of gripper-block distances. 
     '''
     def save_img(self, PATH, eps, step):
-        im = self.sim.render(48, 48, camera_name ='cam0') #cam0')
+        im = self.sim.render(48, 48, camera_name ='cam0')
         return im
 
     
@@ -467,16 +470,16 @@ class Tabletop(SawyerXYZEnv):
             if _iters > 10:
                 break
         imgs = []
-        im = self.sim.render(48, 48, camera_name='cam0') #cam0')
+        im = self.sim.render(48, 48, camera_name='cam0')
         imgs.append(im)
         for i in range(actions.shape[0]):
             action = actions[i]
             self.set_xyz_action_rotz(action[:4])
             self.do_simulation([action[-1], -action[-1]])
-            im = self.sim.render(48, 48, camera_name='cam0') #cam0')
+            im = self.sim.render(48, 48, camera_name='cam0')
             imgs.append(im)
             
-        im = self.sim.render(48, 48, camera_name='cam0') #cam0')
+        im = self.sim.render(48, 48, camera_name='cam0')
         
         with imageio.get_writer(
                 savename + '.gif', mode='I') as writer:
@@ -499,7 +502,7 @@ class Tabletop(SawyerXYZEnv):
         self.pickCompleted = False
         print(self.data.qpos[9:18])
         imgs = []
-        im = self.sim.render(48, 48, camera_name='cam0') #cam0')
+        im = self.sim.render(48, 48, camera_name='cam0')
 
     def save_goal_img(self, PATH, goal, eps):
         '''Returns image with a given goal array of positions for the gripper and blocks.'''
@@ -518,7 +521,7 @@ class Tabletop(SawyerXYZEnv):
         self.init_fingerCOM  =  (rightFinger + leftFinger)/2
         self.pickCompleted = False
         
-        im = self.sim.render(48, 48, camera_name='cam0') #cam0')
+        im = self.sim.render(48, 48, camera_name='cam0')
         return im
 
     

@@ -152,6 +152,11 @@ class Tabletop(SawyerXYZEnv):
                 filename = os.path.join(dirname, "../assets/sawyer_xyz/sawyer_multiobject_hard.xml")
         return filename
 
+    def change_door_angle(self, angle):
+        old_jt = self.data.qpos.copy()[-1]
+        self.data.qpos[-1] = angle
+        print("Door joint before: {} | now: {}".format(old_jt, self.data.qpos[-1]))
+    
     def step(self, action):
         self.set_xyz_action_rotz(action[:4])
         self.do_simulation([action[-1], -action[-1]])
@@ -346,8 +351,6 @@ class Tabletop(SawyerXYZEnv):
             self.obj_init_pos = init_pos
             self._set_obj_xyz(self.obj_init_pos)
 
-        print("door joint {}".format(self.data.qpos[-1]))
-        self.data.qpos[-1] = -.5
         
         for _ in range(100):
             self.do_simulation([0.0, 0.0])

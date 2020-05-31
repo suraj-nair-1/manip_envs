@@ -34,7 +34,7 @@ class Tabletop(SawyerXYZEnv):
             rewMode = 'orig',
             rotMode='rotz',
             problem="rand",
-            door = True, #Add door to the env
+            door = False, #True, #Add door to the env
             exploration = "hard",
             low_dim=False, #True,
             filepath="test",
@@ -341,11 +341,11 @@ class Tabletop(SawyerXYZEnv):
               )
             elif self._hard:
                 if i == 0:
-                    init_pos = [-.25, -0.2]
+                    init_pos = [-.2, -0.15]
                 elif i == 1:
-                    init_pos = [-.25, .2]
+                    init_pos = [-.2, .15]
                 else:
-                    init_pos = [ .15, -.2]
+                    init_pos = [ .2, -.1]
             else:
                 init_pos = [0.1 * (i-1), 0.15]
             self.obj_init_pos = init_pos
@@ -444,18 +444,7 @@ class Tabletop(SawyerXYZEnv):
         '''Returns image after having taken actions from obs.'''
         # print("inside take steps and render")
         threshold = 0.05
-        repeat = True
-        _iters = 0
-        while repeat:
-            for i in range(3):
-                self.targetobj = i
-                self.obj_init_pos = obs[(i+1)*3:((i+1)*3)+2]
-                self._set_obj_xyz(self.obj_init_pos)
-            error = np.linalg.norm(obs[3:12] - self.data.qpos[9:18])
-            repeat = (error >= threshold)
-            _iters += 1
-            if _iters > 10:
-                break
+        
         repeat = True
         _iters = 0
         while repeat:
@@ -468,6 +457,19 @@ class Tabletop(SawyerXYZEnv):
             self.init_fingerCOM  =  (rightFinger + leftFinger)/2
             self.pickCompleted = False
             error = np.linalg.norm(pos - self.get_endeff_pos())
+            repeat = (error >= threshold)
+            _iters += 1
+            if _iters > 10:
+                break
+                
+        repeat = True
+        _iters = 0
+        while repeat:
+            for i in range(3):
+                self.targetobj = i
+                self.obj_init_pos = obs[(i+1)*3:((i+1)*3)+2]
+                self._set_obj_xyz(self.obj_init_pos)
+            error = np.linalg.norm(obs[3:12] - self.data.qpos[9:18])
             repeat = (error >= threshold)
             _iters += 1
             if _iters > 10:
@@ -509,11 +511,6 @@ class Tabletop(SawyerXYZEnv):
 
     def save_goal_img(self, PATH, goal, eps):
         '''Returns image with a given goal array of positions for the gripper and blocks.'''
-        for i in range(3):
-            self.targetobj = i
-            self.obj_init_pos = goal[(i+1)*3:((i+1)*3)+2]
-            self._set_obj_xyz(self.obj_init_pos)
-            
         # Move end effector to green block by simulation
         pos = goal[:3]
         for _ in range(100):
@@ -523,8 +520,14 @@ class Tabletop(SawyerXYZEnv):
         rightFinger, leftFinger = self.get_site_pos('rightEndEffector'), self.get_site_pos('leftEndEffector')
         self.init_fingerCOM  =  (rightFinger + leftFinger)/2
         self.pickCompleted = False
+
+        # Move blocks to correct positions
+        for i in range(3):
+            self.targetobj = i
+            self.obj_init_pos = goal[(i+1)*3:((i+1)*3)+2]
+            self._set_obj_xyz(self.obj_init_pos)
         
-        im = self.sim.render(48, 48, camera_name='cam0')
+        im = self.sim.render(48, 48, camera_name='cam0') #cam0')
         return im
 
     

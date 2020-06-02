@@ -253,8 +253,12 @@ class Tabletop(SawyerXYZEnv):
         # print('qpos')
         # print(qpos)
         start_id = 9 + self.targetobj*3
-        qpos[start_id:(start_id+2)] = pos.copy()
-        qvel[start_id:(start_id+2)] = 0
+        if len(pos) < 3:
+            qpos[start_id:(start_id+2)] = pos.copy()
+            qvel[start_id:(start_id+2)] = 0
+        else:
+            qpos[start_id:(start_id+3)] = pos.copy()
+            qvel[start_id:(start_id+3)] = 0
         # print('qpos of interest')
         # print(qpos[start_id:(start_id+2)])
         self.set_state(qpos, qvel)
@@ -511,7 +515,7 @@ class Tabletop(SawyerXYZEnv):
         '''Returns image with a given goal array of positions for the gripper and blocks.'''
         for i in range(3):
             self.targetobj = i
-            self.obj_init_pos = goal[(i+1)*3:((i+1)*3)+2]
+            self.obj_init_pos = goal[(i+1)*3:((i+1)*3)+3]
             self._set_obj_xyz(self.obj_init_pos)
             
         # Move end effector to green block by simulation

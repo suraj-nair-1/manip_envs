@@ -153,9 +153,9 @@ class Tabletop(SawyerXYZEnv):
         return filename
 
     def change_door_angle(self, angle):
-        old_jt = self.data.qpos.copy()[-1]
+        # old_jt = self.data.qpos.copy()[-1]
         self.data.qpos[-1] = angle
-        print("Door joint before: {} | now: {}".format(old_jt, self.data.qpos[-1]))
+        # print("Door joint before: {} | now: {}".format(old_jt, self.data.qpos[-1]))
     
     def step(self, action):
         self.set_xyz_action_rotz(action[:4])
@@ -206,6 +206,7 @@ class Tabletop(SawyerXYZEnv):
                                   'blue_x': self.data.qpos[15], 
                                   'blue_y': self.data.qpos[16], 
                                   'blue_z': self.data.qpos[17],
+                                  'door_joint': self.data.qpos[18],
                                   'hand_x': self.get_endeff_pos()[0],
                                   'hand_y': self.get_endeff_pos()[1],
                                   'hand_z': self.get_endeff_pos()[2],
@@ -335,14 +336,15 @@ class Tabletop(SawyerXYZEnv):
         self.epcount += 1
         buffer_dis = 0.04
         block_pos = None
+        
         for i in range(3):
             self.targetobj = i
             if self.randomize:
                 init_pos = np.random.uniform(
-                  -0.2,
-                  0.2,
-                  size=(2,),
-              )
+                -0.2,
+                0.2,
+                size=(2,),
+            )
             elif self._hard:
                 if i == 0:
                     init_pos = [-.25, -0.2]
@@ -352,10 +354,12 @@ class Tabletop(SawyerXYZEnv):
                     init_pos = [ .15, -.2]
             else:
                 init_pos = [0.1 * (i-1), 0.15]
+            
+            if self.door:
+                init_pos = [-.15, .2, 0.025 * i]
             self.obj_init_pos = init_pos
             self._set_obj_xyz(self.obj_init_pos)
 
-        
         for _ in range(100):
             self.do_simulation([0.0, 0.0])
         self.targetobj = np.random.randint(3)
@@ -368,7 +372,6 @@ class Tabletop(SawyerXYZEnv):
             im = self.sim.render(48, 48, camera_name='cam0')
             self.imgs.append(im)
             #cv2.imwrite(self.filepath + '/init.png', (cv2.cvtColor(im, cv2.COLOR_BGR2RGB)).astype(np.uint8))
-
         #Can try changing this
         return o, {'green_x': self.data.qpos[9], 
                     'green_y': self.data.qpos[10], 
@@ -379,6 +382,7 @@ class Tabletop(SawyerXYZEnv):
                     'blue_x': self.data.qpos[15], 
                     'blue_y': self.data.qpos[16], 
                     'blue_z': self.data.qpos[17],
+                    'door_joint': self.data.qpos[18],
                     'hand_x': self.get_endeff_pos()[0],
                     'hand_y': self.get_endeff_pos()[1],
                     'hand_z': self.get_endeff_pos()[2],
@@ -453,7 +457,10 @@ class Tabletop(SawyerXYZEnv):
         while repeat:
             for i in range(3):
                 self.targetobj = i
-                self.obj_init_pos = obs[(i+1)*3:((i+1)*3)+2]
+                if self.door: 
+                    self.obj_init_pos = obs[(i+1)*3:((i+1)*3)+3]
+                else:
+                    self.obj_init_pos = obs[(i+1)*3:((i+1)*3)+2]
                 self._set_obj_xyz(self.obj_init_pos)
             error = np.linalg.norm(obs[3:12] - self.data.qpos[9:18])
             repeat = (error >= threshold)
@@ -462,6 +469,8 @@ class Tabletop(SawyerXYZEnv):
                 break
         repeat = True
         _iters = 0
+        if self.door: 
+            self.change_door_angle(obs[-1])
         while repeat:
             pos = obs[:3]
             for _ in range(100): # Move gripper to pos

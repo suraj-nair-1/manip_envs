@@ -34,7 +34,7 @@ class Tabletop(SawyerXYZEnv):
             rewMode = 'orig',
             rotMode='rotz',
             problem="rand",
-            door = True, #Add door to the env
+            door = False, #True, #Add door to the env
             exploration = "hard",
             low_dim=False, #True,
             filepath="test",
@@ -347,11 +347,11 @@ class Tabletop(SawyerXYZEnv):
             )
             elif self._hard:
                 if i == 0:
-                    init_pos = [-.25, -0.2]
+                    init_pos = [-.2, -0.15]
                 elif i == 1:
-                    init_pos = [-.25, .2]
+                    init_pos = [-.2, .15]
                 else:
-                    init_pos = [ .15, -.2]
+                    init_pos = [ .2, -.1]
             else:
                 init_pos = [0.1 * (i-1), 0.15]
             
@@ -443,7 +443,7 @@ class Tabletop(SawyerXYZEnv):
     ''' Logging Code: Saves gifs of every log_freq episode, heat maps of gripper and block positions, and plots
         of gripper-block distances. 
     '''
-    def save_img(self, PATH, eps, step):
+    def save_img(self):
         im = self.sim.render(48, 48, camera_name ='cam0')
         return im
 
@@ -485,6 +485,19 @@ class Tabletop(SawyerXYZEnv):
             _iters += 1
             if _iters > 10:
                 break
+                
+        repeat = True
+        _iters = 0
+        while repeat:
+            for i in range(3):
+                self.targetobj = i
+                self.obj_init_pos = obs[(i+1)*3:((i+1)*3)+2]
+                self._set_obj_xyz(self.obj_init_pos)
+            error = np.linalg.norm(obs[3:12] - self.data.qpos[9:18])
+            repeat = (error >= threshold)
+            _iters += 1
+            if _iters > 10:
+                break
         imgs = []
         im = self.sim.render(48, 48, camera_name='cam0')
         imgs.append(im)
@@ -503,20 +516,32 @@ class Tabletop(SawyerXYZEnv):
                 writer.append_data(imgs[e])
         return im
         
-    def _restore(self, obs):
+    def _restore(self):
+        '''For resetting the env without having to call reset() (i.e. without updating episode count)'''
+        self._reset_hand()
+#         pos = obs[:3]
+#         for _ in range(100): # Move gripper to pos
+#             self.data.set_mocap_pos('mocap', pos)
+#             self.data.set_mocap_quat('mocap', np.array([1, 0, 1, 0]))
+#             self.do_simulation([-1,1], self.frame_skip)
+#         rightFinger, leftFinger = self.get_site_pos('rightEndEffector'), self.get_site_pos('leftEndEffector')
+#         self.init_fingerCOM  =  (rightFinger + leftFinger)/2
+#         self.pickCompleted = False
+        
         for i in range(3):
             self.targetobj = i
-            self.obj_init_pos = obs[(i+1)*3:((i+1)*3)+2]
+            if self._hard:
+                if i == 0:
+                    init_pos = [-.2, -0.15]
+                elif i == 1:
+                    init_pos = [-.2, .15]
+                else:
+                    init_pos = [ .2, -.1]
+            else:
+                init_pos = [0.1 * (i-1), 0.15]
+            self.obj_init_pos = init_pos
             self._set_obj_xyz(self.obj_init_pos)
-        pos = obs[:3]
-        for _ in range(100): # Move gripper to pos
-            self.data.set_mocap_pos('mocap', pos)
-            self.data.set_mocap_quat('mocap', np.array([1, 0, 1, 0]))
-            self.do_simulation([-1,1], self.frame_skip)
-        rightFinger, leftFinger = self.get_site_pos('rightEndEffector'), self.get_site_pos('leftEndEffector')
-        self.init_fingerCOM  =  (rightFinger + leftFinger)/2
-        self.pickCompleted = False
-        print(self.data.qpos[9:18])
+
         imgs = []
         im = self.sim.render(48, 48, camera_name='cam0')
 
@@ -526,7 +551,6 @@ class Tabletop(SawyerXYZEnv):
             self.targetobj = i
             self.obj_init_pos = goal[(i+1)*3:((i+1)*3)+3]
             self._set_obj_xyz(self.obj_init_pos)
-            
         # Move end effector to green block by simulation
         pos = goal[:3]
         for _ in range(100):
@@ -536,8 +560,14 @@ class Tabletop(SawyerXYZEnv):
         rightFinger, leftFinger = self.get_site_pos('rightEndEffector'), self.get_site_pos('leftEndEffector')
         self.init_fingerCOM  =  (rightFinger + leftFinger)/2
         self.pickCompleted = False
+
+        # Move blocks to correct positions
+        for i in range(3):
+            self.targetobj = i
+            self.obj_init_pos = goal[(i+1)*3:((i+1)*3)+2]
+            self._set_obj_xyz(self.obj_init_pos)
         
-        im = self.sim.render(48, 48, camera_name='cam0')
+        im = self.sim.render(48, 48, camera_name='cam0') #cam0')
         return im
 
     

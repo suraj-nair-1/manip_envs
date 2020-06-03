@@ -29,12 +29,13 @@ class Tabletop(SawyerXYZEnv):
                       'obj_init_angle': 0.3}], 
             goal_low=None,
             goal_high=None,
-            hand_init_pos = (0, 0.6, 0.2),
-            liftThresh = 0.04,
-            rewMode = 'orig',
+            hand_init_pos=(0, 0.6, 0.2),
+            liftThresh=0.04,
+            rewMode='orig',
             rotMode='rotz',
             problem="rand",
-            door = False, #True, #Add door to the env
+            door=True, #Add door to the env
+            tower=True,
             exploration = "hard",
             low_dim=False, #True,
             filepath="test",
@@ -48,6 +49,7 @@ class Tabletop(SawyerXYZEnv):
     ):
         self.randomize = False
         self.smm = smm
+        self.tower = tower
         self.debug_count = 0
         self.door = door # if True, add door to the env
         self._hard = hard # if True, blocks are initialized to diff corners
@@ -149,6 +151,8 @@ class Tabletop(SawyerXYZEnv):
         else:
             if self.door:
                 filename = os.path.join(dirname, "../assets/sawyer_xyz/sawyer_multiobject_door_v2.xml")
+                if self.tower:
+                    filename = os.path.join(dirname, "../assets/sawyer_xyz/sawyer_multiobject_door_v3.xml")
             else:
                 filename = os.path.join(dirname, "../assets/sawyer_xyz/sawyer_multiobject_hard.xml")
         return filename
@@ -380,6 +384,13 @@ class Tabletop(SawyerXYZEnv):
             if self.door:
                 init_pos = [-0.15, 0.75, 0.05 * (i+1)]
                 init_pos[:2] += np.random.normal(loc=0, scale=0.001, size=2)
+                if self.tower:
+                    if i == 0:
+                        init_pos = [-0.15, 0.8, 0.075]
+                    if i == 1:
+                        init_pos = [-0.12, 0.6, 0.075]
+                    if i == 2:
+                        init_pos = [0.25, 0.4, 0.075]
             self.obj_init_pos = init_pos
             self._set_obj_xyz(self.obj_init_pos)
             object_qpos = self.sim.data.get_joint_qpos('objGeom{}_x'.format(i))
@@ -598,6 +609,14 @@ class Tabletop(SawyerXYZEnv):
             if self.door:
                 init_pos = [-0.15, 0.75, 0.05 * (i+1)]
                 init_pos[:2] += np.random.normal(loc=0, scale=0.001, size=2)
+            
+                if self.tower:
+                    if i == 0:
+                        init_pos = [-0.15, 0.8, 0.075]
+                    if i == 1:
+                        init_pos = [-0.12, 0.6, 0.075]
+                    if i == 2:
+                        init_pos = [0.25, 0.4, 0.075]
             self.obj_init_pos = init_pos
             
             #qpos = self.sim.data.get_joint_qpos("objGeom{}_x".format(i))
@@ -625,12 +644,30 @@ class Tabletop(SawyerXYZEnv):
             self.targetobj = i
             if self.door:
                 self.obj_init_pos = [-0.15, 0.75, 0.05 * (i+1)]
+                
+                if self.tower:
+                    if i == 0:
+                        init_pos = [-0.15, 0.8, 0.075]
+                    if i == 1:
+                        init_pos = [-0.12, 0.6, 0.075]
+                    if i == 2:
+                        init_pos = [0.25, 0.4, 0.075]
+                    self.obj_init_pos = init_pos
             else:
                 self.obj_init_pos = goal[(i+1)*3:((i+1)*3)+2]
                 self.obj_init_pos[:2] += np.random.normal(loc=0, scale=0.001, size=2)
                 
             self._set_obj_xyz(self.obj_init_pos)
 
+            object_qpos = self.sim.data.get_joint_qpos('objGeom{}_x'.format(i))
+            object_qpos[:3 ] = init_pos
+            object_qpos[3:] = 0.
+            self.sim.data.set_joint_qpos('objGeom{}_x'.format(i), object_qpos)
+            object_qvel = self.sim.data.get_joint_qvel('objGeom{}_x'.format(i))
+            object_qvel[:] = 0.
+            self.sim.data.set_joint_qvel('objGeom{}_x'.format(i), object_qvel)
+         
+            self.sim.forward()
         im = self.sim.render(48, 48, camera_name='cam0') #cam0')
         return im
 

@@ -48,6 +48,7 @@ class Tabletop(SawyerXYZEnv):
     ):
         self.randomize = False
         self.smm = smm
+        self.debug_count = 0
         self.door = door # if True, add door to the env
         self._hard = hard # if True, blocks are initialized to diff corners
         self.exploration = exploration
@@ -147,7 +148,7 @@ class Tabletop(SawyerXYZEnv):
             filename = os.path.join(dirname, "../assets/sawyer_xyz/sawyer_multiobject.xml")
         else:
             if self.door:
-                filename = os.path.join(dirname, "../assets/sawyer_xyz/sawyer_multiobject_door_v1.xml")
+                filename = os.path.join(dirname, "../assets/sawyer_xyz/sawyer_multiobject_door_v2.xml")
             else:
                 filename = os.path.join(dirname, "../assets/sawyer_xyz/sawyer_multiobject_hard.xml")
         return filename
@@ -176,6 +177,7 @@ class Tabletop(SawyerXYZEnv):
         '''
         if self.verbose:
             hand = self.get_endeff_pos()[:3].copy()
+            # get_geom_xpos('objGeom0') = same as get_site_xpos('obj0')
             block0 = self.data.get_geom_xpos('objGeom0')[:3].copy()
             block1 = self.data.get_geom_xpos('objGeom1')[:3].copy()
             block2 = self.data.get_geom_xpos('objGeom2')[:3].copy()
@@ -197,6 +199,22 @@ class Tabletop(SawyerXYZEnv):
                 self.block1_interaction.append(dist1)
                 self.block2_interaction.append(dist2)
         self.cur_path_length +=1
+        if self.door:
+            return ob, reward, done, {'green_x': self.data.get_site_xpos('obj0')[0], 
+                                      'green_y': self.data.get_site_xpos('obj0')[1], 
+                                      'green_z': self.data.get_site_xpos('obj0')[2], 
+                                      'pink_x': self.data.get_site_xpos('obj1')[0], 
+                                      'pink_y': self.data.get_site_xpos('obj1')[1], 
+                                      'pink_z': self.data.get_site_xpos('obj1')[2], 
+                                      'blue_x': self.data.get_site_xpos('obj2')[0], 
+                                      'blue_y': self.data.get_site_xpos('obj2')[1], 
+                                      'blue_z': self.data.get_site_xpos('obj2')[2], 
+                                      'door_joint': self.data.qpos[-1],
+                                      'hand_x': self.get_endeff_pos()[0],
+                                      'hand_y': self.get_endeff_pos()[1],
+                                      'hand_z': self.get_endeff_pos()[2],
+                                      'dist': - self.compute_reward()}
+
         return ob, reward, done, {'green_x': self.data.qpos[9], 
                                   'green_y': self.data.qpos[10], 
                                   'green_z': self.data.qpos[11], 
@@ -249,19 +267,16 @@ class Tabletop(SawyerXYZEnv):
     def _set_obj_xyz(self, pos):
         qpos = self.data.qpos.flat.copy()
         qvel = self.data.qvel.flat.copy()
-        # print('target ob id')
-        # print(self.targetobj)
-        # print('qpos')
-        # print(qpos)
-        start_id = 9 + self.targetobj*3
+        if self.door:
+            start_id = 9 + self.targetobj*7
+        else:
+            start_id = 9 + self.targetobj*3
         if len(pos) < 3:
             qpos[start_id:(start_id+2)] = pos.copy()
             qvel[start_id:(start_id+2)] = 0
         else:
             qpos[start_id:(start_id+3)] = pos.copy()
             qvel[start_id:(start_id+3)] = 0
-        # print('qpos of interest')
-        # print(qpos[start_id:(start_id+2)])
         self.set_state(qpos, qvel)
 
     def render(self, mode=""):
@@ -279,6 +294,8 @@ class Tabletop(SawyerXYZEnv):
 
     def sample_goal(self):
         start_id = 9 + self.targetobj*3
+        if self.door:
+            start_id = 9 + self.targetobj*7
         qpos = self.data.qpos.flat.copy()
         ogpos = qpos[start_id:(start_id+2)]
         goal_pos = np.random.uniform(
@@ -337,6 +354,12 @@ class Tabletop(SawyerXYZEnv):
         buffer_dis = 0.04
         block_pos = None
         
+        for _ in range(100):
+            self.do_simulation([0.0, 0.0])
+        self.targetobj = np.random.randint(3)
+        self.sample_goal()
+        self.cur_path_length = 0
+        
         for i in range(3):
             self.targetobj = i
             if self.randomize:
@@ -353,18 +376,21 @@ class Tabletop(SawyerXYZEnv):
                 else:
                     init_pos = [ .2, -.1]
             else:
-                init_pos = [0.1 * (i-1), 0.15]
-            
+                init_pos = [0.1 * (i-1), 0.15] 
             if self.door:
-                init_pos = [-.15, .2, 0.025 * i]
+                init_pos = [-0.15, 0.75, 0.05 * (i+1)]
+                init_pos[:2] += np.random.normal(loc=0, scale=0.001, size=2)
             self.obj_init_pos = init_pos
             self._set_obj_xyz(self.obj_init_pos)
-
-        for _ in range(100):
-            self.do_simulation([0.0, 0.0])
-        self.targetobj = np.random.randint(3)
-        self.sample_goal()
-        self.cur_path_length = 0
+            object_qpos = self.sim.data.get_joint_qpos('objGeom{}_x'.format(i))
+            object_qpos[:3 ] = init_pos
+            object_qpos[3:] = 0.
+            self.sim.data.set_joint_qpos('objGeom{}_x'.format(i), object_qpos)
+            object_qvel = self.sim.data.get_joint_qvel('objGeom{}_x'.format(i))
+            object_qvel[:] = 0.
+            self.sim.data.set_joint_qvel('objGeom{}_x'.format(i), object_qvel)
+         
+        self.sim.forward()
         o = self.get_obs()
         
         if self.epcount % self.log_freq == 0:
@@ -373,6 +399,22 @@ class Tabletop(SawyerXYZEnv):
             self.imgs.append(im)
             #cv2.imwrite(self.filepath + '/init.png', (cv2.cvtColor(im, cv2.COLOR_BGR2RGB)).astype(np.uint8))
         #Can try changing this
+        if self.door:
+            return o, { 'green_x': self.data.get_site_xpos('obj0')[0], 
+                        'green_y': self.data.get_site_xpos('obj0')[1], 
+                        'green_z': self.data.get_site_xpos('obj0')[2], 
+                        'pink_x': self.data.get_site_xpos('obj1')[0], 
+                        'pink_y': self.data.get_site_xpos('obj1')[1], 
+                        'pink_z': self.data.get_site_xpos('obj1')[2], 
+                        'blue_x': self.data.get_site_xpos('obj2')[0], 
+                        'blue_y': self.data.get_site_xpos('obj2')[1], 
+                        'blue_z': self.data.get_site_xpos('obj2')[2], 
+                        'door_joint': self.data.qpos[-1],
+                        'hand_x': self.get_endeff_pos()[0],
+                        'hand_y': self.get_endeff_pos()[1],
+                        'hand_z': self.get_endeff_pos()[2],
+                        'dist': - self.compute_reward()}
+
         return o, {'green_x': self.data.qpos[9], 
                     'green_y': self.data.qpos[10], 
                     'green_z': self.data.qpos[11], 
@@ -419,7 +461,10 @@ class Tabletop(SawyerXYZEnv):
     def compute_reward(self):
         if self.exploration_only: # if not goal-conditioned
             return 0.0
-        start_id = 9 + self.targetobj*3
+        if self.door:
+            start_id = 9 + self.targetobj*7
+        else:
+            start_id = 9 + self.targetobj*3
         qpos = self.data.qpos.flat.copy()
         ogpos = qpos[start_id:(start_id+2)]
         dist = np.linalg.norm(ogpos - self._state_goal)
@@ -462,9 +507,16 @@ class Tabletop(SawyerXYZEnv):
                 else:
                     self.obj_init_pos = obs[(i+1)*3:((i+1)*3)+2]
                 self._set_obj_xyz(self.obj_init_pos)
-            error = np.linalg.norm(obs[3:12] - self.data.qpos[9:18])
-            repeat = (error >= threshold)
-            _iters += 1
+            
+                # qpos = self.sim.data.get_joint_qpos("objGeom{}_x".format(i))
+                # qpos[2] = 0.0
+                # self.sim.data.set_joint_qpos("objGeom{}_x".format(i), qpos)
+            if not self.door:
+                error = np.linalg.norm(obs[3:12] - self.data.qpos[9:18])
+                repeat = (error >= threshold)
+                _iters += 1
+            else:
+                break
             if _iters > 10:
                 break
         repeat = True
@@ -493,6 +545,10 @@ class Tabletop(SawyerXYZEnv):
                 self.targetobj = i
                 self.obj_init_pos = obs[(i+1)*3:((i+1)*3)+2]
                 self._set_obj_xyz(self.obj_init_pos)
+                
+                # qpos = self.sim.data.get_joint_qpos("objGeom{}_x".format(i))
+                # qpos[2] = 0.0
+                # self.sim.data.set_joint_qpos("objGeom{}_x".format(i), qpos)
             error = np.linalg.norm(obs[3:12] - self.data.qpos[9:18])
             repeat = (error >= threshold)
             _iters += 1
@@ -539,7 +595,14 @@ class Tabletop(SawyerXYZEnv):
                     init_pos = [ .2, -.1]
             else:
                 init_pos = [0.1 * (i-1), 0.15]
+            if self.door:
+                init_pos = [-0.15, 0.75, 0.05 * (i+1)]
+                init_pos[:2] += np.random.normal(loc=0, scale=0.001, size=2)
             self.obj_init_pos = init_pos
+            
+            #qpos = self.sim.data.get_joint_qpos("objGeom{}_x".format(i))
+            #qpos[2] = 0.0
+            #self.sim.data.set_joint_qpos("objGeom{}_x".format(i), qpos)
             self._set_obj_xyz(self.obj_init_pos)
 
         imgs = []
@@ -547,10 +610,6 @@ class Tabletop(SawyerXYZEnv):
 
     def save_goal_img(self, PATH, goal, eps):
         '''Returns image with a given goal array of positions for the gripper and blocks.'''
-        for i in range(3):
-            self.targetobj = i
-            self.obj_init_pos = goal[(i+1)*3:((i+1)*3)+3]
-            self._set_obj_xyz(self.obj_init_pos)
         # Move end effector to green block by simulation
         pos = goal[:3]
         for _ in range(100):
@@ -561,12 +620,17 @@ class Tabletop(SawyerXYZEnv):
         self.init_fingerCOM  =  (rightFinger + leftFinger)/2
         self.pickCompleted = False
 
-        # Move blocks to correct positions
+        #  Move blocks to correct positions
         for i in range(3):
             self.targetobj = i
-            self.obj_init_pos = goal[(i+1)*3:((i+1)*3)+2]
+            if self.door:
+                self.obj_init_pos = [-0.15, 0.75, 0.05 * (i+1)]
+            else:
+                self.obj_init_pos = goal[(i+1)*3:((i+1)*3)+2]
+                self.obj_init_pos[:2] += np.random.normal(loc=0, scale=0.001, size=2)
+                
             self._set_obj_xyz(self.obj_init_pos)
-        
+
         im = self.sim.render(48, 48, camera_name='cam0') #cam0')
         return im
 

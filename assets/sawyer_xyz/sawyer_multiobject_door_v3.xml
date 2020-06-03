@@ -5,19 +5,19 @@
         <include file="sawyer_xyz_base.xml"></include>
         <body name="obj0" pos="0.025 0.025 0.025">
             <joint name="objGeom0_x" type="free" limited="false" damping="0.01"></joint>
-            <geom size="0.025 0.025 0.075" type="box" condim="3" name="objGeom0" material="block0_mat"  mass="5" friction="0.1 0.1 0.2"></geom>
+            <geom size="0.025 0.025 0.075" type="box" condim="3" name="objGeom0" rgba="0.0 1.0 0.0 1"  mass="5" friction="0.1 0.1 0.2"></geom>
             <site name="obj0" pos="0 0 0" size="0.02 0.02 0.02" rgba="0.0 1.0 0.0 1" type="sphere"></site>
         </body>
 
         <body name="obj1" pos="0.025 0.025 0.025">
             <joint name="objGeom1_x" type="free" limited="false" damping="0.01"></joint>
-            <geom size="0.025 0.025 0.075" type="box" condim="3" name="objGeom1" material="block1_mat" mass="5" friction="0.1 0.1 0.2"></geom>
+            <geom size="0.025 0.025 0.075" type="box" condim="3" name="objGeom1" rgba="1 0.5 1 1" mass="5" friction="0.1 0.1 0.2"></geom>
             <site name="obj1" pos="0 0 0" size="0.02 0.02 0.02" rgba="1 .5 1 1" type="sphere"></site>
         </body>
       
         <body name="obj2" pos="0.025 0.025 0.025">
             <joint name="objGeom2_x" type="free" limited="false" damping="0.01"></joint>
-            <geom size="0.025 0.025 0.075" type="box" condim="3" name="objGeom2" material="block2_mat" mass="5" friction="0.1 0.1 0.2"></geom>
+            <geom size="0.025 0.025 0.075" type="box" condim="3" name="objGeom2" rgba="0 0.0 1 1" mass="5" friction="0.1 0.1 0.2"></geom>
             <site name="obj2" pos="0 0 0" size="0.02 0.02 0.02" rgba="0 0.0 1 1" type="sphere"></site>
         </body>
 
@@ -25,14 +25,14 @@
       
 
         <body name="door" pos="0.1 0.85 0.1">
-                <joint name="doorjoint" pos="-.16 0 0" axis="0 0 1"
+                <joint name="doorjoint" pos="-.08 0 0" axis="0 0 1"
                        type="hinge" limited="true" range="-1.5708 1.5708" damping="1" armature="0" />
-                <geom type="box" pos="0 0 0" size="0.12 0.01 0.1"
+                <geom type="box" pos="0 0 0" size="0.06 0.005 0.05"
                       rgba=".1 .1 .9 1" contype="1" conaffinity="1" material="light_wood"/>
                 <!--front, parallel to door-->
-                <geom type="box" pos="0.1 -0.15 0.05" size="0.04 0.01 0.02" rgba="0 0 0 1" contype="1" conaffinity="1" name="handle" material="light_wood"/>
+                <geom type="box" pos="0.05 -0.075 0.025" size="0.02 0.005 0.01" rgba="0 0 0 1" contype="1" conaffinity="1" name="handle" material="light_wood"/>
                 <!--front-->
-                <geom type="box" pos="0.14 -0.075 0.05" size="0.01 0.075 0.02" rgba="0 0 0 1" contype="1" conaffinity="1" material="light_wood"/>
+                <geom type="box" pos="0.07 -0.0375 0.025" size="0.005 0.0375 0.01" rgba="0 0 0 1" contype="1" conaffinity="1" material="light_wood"/>
         </body>
 
     </worldbody>

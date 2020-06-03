@@ -5,19 +5,19 @@
         <include file="sawyer_xyz_base.xml"></include>
         <body name="obj0" pos="0.025 0.025 0.025">
             <joint name="objGeom0_x" type="free" limited="false" damping="0.01"></joint>
-            <geom size="0.025 0.025 0.025" type="box" condim="3" name="objGeom0" material="block0_mat"  mass="5" friction="0.1 0.1 0.2"></geom>
+            <geom size="0.025 0.025 0.025" type="box" condim="3" name="objGeom0" mass="5" friction="0.1 0.1 0.2"></geom>
             <site name="obj0" pos="0 0 0" size="0.02 0.02 0.02" rgba="0.0 1.0 0.0 1" type="sphere"></site>
         </body>
 
         <body name="obj1" pos="0.025 0.025 0.025">
             <joint name="objGeom1_x" type="free" limited="false" damping="0.01"></joint>
-            <geom size="0.025 0.025 0.025" type="box" condim="3" name="objGeom1" material="block1_mat" mass="5" friction="0.1 0.1 0.2"></geom>
+            <geom size="0.025 0.025 0.025" type="box" condim="3" name="objGeom1" mass="5" friction="0.1 0.1 0.2"></geom>
             <site name="obj1" pos="0 0 0" size="0.02 0.02 0.02" rgba="1 .5 1 1" type="sphere"></site>
         </body>
       
         <body name="obj2" pos="0.025 0.025 0.025">
             <joint name="objGeom2_x" type="free" limited="false" damping="0.01"></joint>
-            <geom size="0.025 0.025 0.025" type="box" condim="3" name="objGeom2" material="block2_mat" mass="5" friction="0.1 0.1 0.2"></geom>
+            <geom size="0.025 0.025 0.025" type="box" condim="3" name="objGeom2" mass="5" friction="0.1 0.1 0.2"></geom>
             <site name="obj2" pos="0 0 0" size="0.02 0.02 0.02" rgba="0 0.0 1 1" type="sphere"></site>
         </body>
 

@@ -52,7 +52,7 @@ class Tabletop(SawyerXYZEnv):
         self.tower = tower
         self.debug_count = 0
         self.door = door # if True, add door to the env
-        self._hard = hard # if True, blocks are initialized to diff corners
+        self.hard = hard # if True, blocks are initialized to diff corners
         self.exploration = exploration
         self.max_path_length = max_path_length
         self.cur_path_length = 0
@@ -147,14 +147,14 @@ class Tabletop(SawyerXYZEnv):
     def model_name(self):
         dirname = os.path.dirname(__file__)
         if self.exploration == "easy":
-            filename = os.path.join(dirname, "../assets/sawyer_xyz/sawyer_multiobject.xml")
+            filename = os.path.join(dirname, "../assets/sawyer_xyz/sawyer_multiobject.xml") # three easy blocks
         else:
             if self.door:
-                filename = os.path.join(dirname, "../assets/sawyer_xyz/sawyer_multiobject_door_v2.xml")
+                filename = os.path.join(dirname, "../assets/sawyer_xyz/sawyer_multiobject_door_v2.xml") # three stacked blocks plus door
                 if self.tower:
-                    filename = os.path.join(dirname, "../assets/sawyer_xyz/sawyer_multiobject_door_v3.xml")
+                    filename = os.path.join(dirname, "../assets/sawyer_xyz/sawyer_multiobject_door_v3.xml") # three tall blocks spread out plus door
             else:
-                filename = os.path.join(dirname, "../assets/sawyer_xyz/sawyer_multiobject_hard.xml")
+                filename = os.path.join(dirname, "../assets/sawyer_xyz/sawyer_multiobject_hard.xml") # three blocks but spread out
         return filename
 
     def change_door_angle(self, angle):
@@ -372,7 +372,7 @@ class Tabletop(SawyerXYZEnv):
                 0.2,
                 size=(2,),
             )
-            elif self._hard:
+            elif self.hard:
                 if i == 0:
                     init_pos = [-.2, -0.15]
                 elif i == 1:
@@ -495,6 +495,105 @@ class Tabletop(SawyerXYZEnv):
     def log_diagnostics(self, paths = None, logger = None):
         pass
     
+    def get_goal(self, block):
+        ''' Returns a random goal position depending on the desired block/door. 
+            Must be rendered using save_goal_img to get actual image obs.'''
+        goal_pos = None
+        if self.door:
+            # If want to set door as the target, uncomment below
+            # hinge between +/- 90 degrees, at least abs > 20 degrees
+            angle = 0.
+            while abs(angle - 0.) < 0.261799:
+                angle = np.random.uniform(-0.785398, 0.785398) # btween 45 degrees
+            self.change_door_angle(angle)
+            block_0_pos = self.data.qpos[9:12]
+            block_1_pos = self.data.qpos[16:19]
+            block_2_pos = self.data.qpos[23:26]
+            gripper_pos = self.hand_init_pos.copy() 
+            goal_pos = np.concatenate([gripper_pos, block_0_pos, block_1_pos, block_2_pos])
+            return goal_pos 
+
+        elif block == 0:
+            block_1_pos = [0.0, 0.15, 0] + np.random.uniform(-0.02, 0.02, (3,))# pink block
+            block_2_pos = [0.2, 0.15, 0] + np.random.uniform(-0.02, 0.02, (3,)) # blue block
+            block_0_pos = np.random.uniform( # green block
+                    (-0.2, 0.05, 0.0),  
+                    (-0.0, 0.25, 0.20), 
+                    size=(3,)) 
+            if self.hard:
+                block_1_pos = [-.2, .15, 0] + np.random.uniform(-0.02, 0.02, (3,))# pink block
+                block_2_pos = [.2, -.1, 0] + np.random.uniform(-0.02, 0.02, (3,)) # blue block
+                block_0_pos = np.random.uniform( # green block
+                        (-.25, -0.2, 0.0),  
+                        (-.15, -0.1, 0.20), 
+                        size=(3,)) 
+            while np.linalg.norm(block_0_pos - block_1_pos) < 0.06 or np.linalg.norm(block_0_pos - block_2_pos) < 0.06: # ensure the blocks do not overlap
+                block_0_pos = np.random.uniform( # green block
+                        (-.25, -0.2, 0.0),  
+                        (-.15, -0.1, 0.20), 
+                        size=(3,)) 
+            block_0_pos += np.random.uniform(-0.02, 0.02, (3,))
+            # Make goal pos: Random first block initialization, want gripper hovering over block 
+            gripper_pos = block_0_pos.copy()
+            gripper_pos += np.random.uniform(-0.02, 0.02, (3,))
+            gripper_pos[1] += 0.6 # need to adjust for middle of the table for the gripper being (0.0, 0.6)
+            gripper_pos[2] = np.random.uniform(0.0, 0.20)
+            goal_pos = np.concatenate((gripper_pos, block_0_pos, block_1_pos, block_2_pos))
+            
+        elif block == 1:
+            block_0_pos = [-0.1, 0.15, 0] + np.random.uniform(-0.02, 0.02, (3,)) # green block
+            block_2_pos = [0.1, 0.15, 0] + np.random.uniform(-0.02, 0.02, (3,)) # blue block
+            block_1_pos = np.random.uniform( # pink block
+                    (-0.1, 0.05, 0),
+                    (0.1, 0.25, 0.20),
+                    size=(3,))
+            if self.hard:
+                block_0_pos = [-.2, -.15, 0] + np.random.uniform(-0.02, 0.02, (3,))# pink block
+                block_2_pos = [.2, -.1, 0] + np.random.uniform(-0.02, 0.02, (3,)) # blue block
+                block_1_pos = np.random.uniform( # green block
+                        (-.25, 0.1, 0.0),  
+                        (-.15, 0.2, 0.20), 
+                        size=(3,)) 
+            while np.linalg.norm(block_1_pos - block_0_pos) < 0.06 or np.linalg.norm(block_1_pos - block_2_pos) < 0.06: # ensure the blocks do not overlap
+                block_1_pos = np.random.uniform( # green block
+                        (-.25, 0.1, 0.0),  
+                        (-.15, 0.2, 0.20), 
+                        size=(3,))
+            block_1_pos += np.random.uniform(-0.02, 0.02, (3,))
+            # Make goal pos: Random first block initialization, want gripper hovering over block 
+            gripper_pos = block_1_pos.copy()
+            gripper_pos += np.random.uniform(-0.02, 0.02, (3,))
+            gripper_pos[1] += 0.6 # need to adjust for middle of the table for the gripper being (0.0, 0.6)
+            gripper_pos[2] = np.random.uniform(0.0, 0.20)
+            goal_pos = np.concatenate((gripper_pos, block_0_pos, block_1_pos, block_2_pos))
+
+        elif block == 2:
+            block_1_pos = [0.0, 0.15, 0] + np.random.uniform(-0.02, 0.02, (3,)) # pink block
+            block_0_pos = [-0.1, 0.15, 0] + np.random.uniform(-0.02, 0.02, (3,)) # green block
+            block_2_pos = np.random.uniform( # blue block
+                    (0.0, 0.1, 0.0),  
+                    (0.2, 0.2, 0.20), 
+                    size=(3,)) 
+            if self.hard:
+                block_0_pos = [-.2, -.15, 0] + np.random.uniform(-0.02, 0.02, (3,))# pink block
+                block_1_pos = [-.2, .15, 0] + np.random.uniform(-0.02, 0.02, (3,))# pink block
+                block_2_pos = np.random.uniform( # green block
+                        (.15, -0.15, 0.0),  
+                        (.25, -0.05, 0.20), 
+                        size=(3,)) 
+            while np.linalg.norm(block_2_pos - block_1_pos) < 0.06 or np.linalg.norm(block_2_pos - block_0_pos) < 0.06: # ensure the blocks do not overlap
+                block_2_pos = np.random.uniform( # green block
+                    (.15, -0.15, 0.0),  
+                    (.25, -0.05, 0.20), 
+                    size=(3,)) 
+            block_2_pos += np.random.uniform(-0.02, 0.02, (3,))
+            # Make goal pos: Random first block initialization, want gripper hovering over block 
+            gripper_pos = block_2_pos.copy()
+            gripper_pos += np.random.uniform(-0.02, 0.02, (3,))
+            gripper_pos[1] += 0.6 # need to adjust for middle of the table for the gripper being (0.0, 0.6)
+            gripper_pos[2] = np.random.uniform(0.0, 0.20)
+            goal_pos = np.concatenate((gripper_pos, block_0_pos, block_1_pos, block_2_pos))
+        return goal_pos
     
     ''' Logging Code: Saves gifs of every log_freq episode, heat maps of gripper and block positions, and plots
         of gripper-block distances. 
@@ -597,7 +696,7 @@ class Tabletop(SawyerXYZEnv):
         
         for i in range(3):
             self.targetobj = i
-            if self._hard:
+            if self.hard:
                 if i == 0:
                     init_pos = [-.2, -0.15]
                 elif i == 1:
@@ -680,13 +779,6 @@ class Tabletop(SawyerXYZEnv):
                 self.filepath + '/Eps' + str(self.epcount) + '.gif', mode='I') as writer:
             for i in range(self.max_path_length + 1):
                 writer.append_data(self.imgs[i])
-
-        #with imageio.get_writer(
-        #        self.filepath + '/Eps' + str(self.epcount) + '.gif', mode='I') as writer:
-        #    writer.append_data(imageio.imread(self.filepath + '/init.png'))
-        #    for i in range(self.max_path_length):
-        #        img_path = self.filepath + '/obs' + str(i) + '.png'
-        #        writer.append_data(imageio.imread(img_path))
                 
     def save_distribution(self):
         ''' Saves the heat maps for hand and block positions.

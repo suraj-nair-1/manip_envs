@@ -228,7 +228,6 @@ class Tabletop(SawyerXYZEnv):
                                   'blue_x': self.data.qpos[15], 
                                   'blue_y': self.data.qpos[16], 
                                   'blue_z': self.data.qpos[17],
-                                  'door_joint': self.data.qpos[18],
                                   'hand_x': self.get_endeff_pos()[0],
                                   'hand_y': self.get_endeff_pos()[1],
                                   'hand_z': self.get_endeff_pos()[2],
@@ -391,15 +390,15 @@ class Tabletop(SawyerXYZEnv):
                         init_pos = [-0.12, 0.6, 0.075]
                     if i == 2:
                         init_pos = [0.25, 0.4, 0.075]
-            self.obj_init_pos = init_pos
-            self._set_obj_xyz(self.obj_init_pos)
-            object_qpos = self.sim.data.get_joint_qpos('objGeom{}_x'.format(i))
-            object_qpos[:3 ] = init_pos
-            object_qpos[3:] = 0.
-            self.sim.data.set_joint_qpos('objGeom{}_x'.format(i), object_qpos)
-            object_qvel = self.sim.data.get_joint_qvel('objGeom{}_x'.format(i))
-            object_qvel[:] = 0.
-            self.sim.data.set_joint_qvel('objGeom{}_x'.format(i), object_qvel)
+                self.obj_init_pos = init_pos
+                self._set_obj_xyz(self.obj_init_pos)
+                object_qpos = self.sim.data.get_joint_qpos('objGeom{}_x'.format(i))
+                object_qpos[:3 ] = init_pos
+                object_qpos[3:] = 0.
+                self.sim.data.set_joint_qpos('objGeom{}_x'.format(i), object_qpos)
+                object_qvel = self.sim.data.get_joint_qvel('objGeom{}_x'.format(i))
+                object_qvel[:] = 0.
+                self.sim.data.set_joint_qvel('objGeom{}_x'.format(i), object_qvel)
          
         self.sim.forward()
         o = self.get_obs()
@@ -435,7 +434,6 @@ class Tabletop(SawyerXYZEnv):
                     'blue_x': self.data.qpos[15], 
                     'blue_y': self.data.qpos[16], 
                     'blue_z': self.data.qpos[17],
-                    'door_joint': self.data.qpos[18],
                     'hand_x': self.get_endeff_pos()[0],
                     'hand_y': self.get_endeff_pos()[1],
                     'hand_z': self.get_endeff_pos()[2],
@@ -758,13 +756,14 @@ class Tabletop(SawyerXYZEnv):
                 
             self._set_obj_xyz(self.obj_init_pos)
 
-            object_qpos = self.sim.data.get_joint_qpos('objGeom{}_x'.format(i))
-            object_qpos[:3 ] = init_pos
-            object_qpos[3:] = 0.
-            self.sim.data.set_joint_qpos('objGeom{}_x'.format(i), object_qpos)
-            object_qvel = self.sim.data.get_joint_qvel('objGeom{}_x'.format(i))
-            object_qvel[:] = 0.
-            self.sim.data.set_joint_qvel('objGeom{}_x'.format(i), object_qvel)
+            if self.door:
+                object_qpos = self.sim.data.get_joint_qpos('objGeom{}_x'.format(i))
+                object_qpos[:3 ] = init_pos
+                object_qpos[3:] = 0.
+                self.sim.data.set_joint_qpos('objGeom{}_x'.format(i), object_qpos)
+                object_qvel = self.sim.data.get_joint_qvel('objGeom{}_x'.format(i))
+                object_qvel[:] = 0.
+                self.sim.data.set_joint_qvel('objGeom{}_x'.format(i), object_qvel)
          
             self.sim.forward()
         im = self.sim.render(48, 48, camera_name='cam0') #cam0')

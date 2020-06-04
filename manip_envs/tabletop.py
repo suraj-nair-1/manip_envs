@@ -36,6 +36,7 @@ class Tabletop(SawyerXYZEnv):
             problem="rand",
             door=True, #Add door to the env
             tower=True,
+            stack = False,
             exploration = "hard",
             low_dim=False, #True,
             filepath="test",
@@ -49,10 +50,11 @@ class Tabletop(SawyerXYZEnv):
     ):
         self.randomize = False
         self.smm = smm
-        self.tower = tower
+        self.tower = tower # Makes blocks tall when door is added to the env
         self.debug_count = 0
         self.door = door # if True, add door to the env
         self.hard = hard # if True, blocks are initialized to diff corners
+        self.stack = stack # if True, then goal ims are stacked blocks
         self.exploration = exploration
         self.max_path_length = max_path_length
         self.cur_path_length = 0
@@ -153,6 +155,8 @@ class Tabletop(SawyerXYZEnv):
                 filename = os.path.join(dirname, "../assets/sawyer_xyz/sawyer_multiobject_door_v2.xml") # three stacked blocks plus door
                 if self.tower:
                     filename = os.path.join(dirname, "../assets/sawyer_xyz/sawyer_multiobject_door_v3.xml") # three tall blocks spread out plus door
+            elif self.stack:
+                filename = os.path.join(dirname, "../assets/sawyer_xyz/sawyer_multiobject_stack.xml")
             else:
                 filename = os.path.join(dirname, "../assets/sawyer_xyz/sawyer_multiobject_hard.xml") # three blocks but spread out
         return filename
@@ -399,7 +403,14 @@ class Tabletop(SawyerXYZEnv):
                 object_qvel = self.sim.data.get_joint_qvel('objGeom{}_x'.format(i))
                 object_qvel[:] = 0.
                 self.sim.data.set_joint_qvel('objGeom{}_x'.format(i), object_qvel)
-         
+            elif self.stack:
+                if i == 0:
+                    init_pos = [-.2, -0.15]
+                elif i == 1:
+                    init_pos = [-.1, .15]
+                else:
+                    init_pos = [ .1, .15]
+                
         self.sim.forward()
         o = self.get_obs()
         
@@ -510,6 +521,18 @@ class Tabletop(SawyerXYZEnv):
             gripper_pos = self.hand_init_pos.copy() 
             goal_pos = np.concatenate([gripper_pos, block_0_pos, block_1_pos, block_2_pos])
             return goal_pos 
+        
+        elif self.stack:
+            # Goals are block1 stacked over block2, block0 untouched
+            block_0_pos = [-0.1, 0.15, 0] + np.random.uniform(-0.02, 0.02, (3,)) # green block
+            block_2_pos = self.data.qpos[15:18] + np.random.uniform(-0.05, 0.05, (3,))
+            block_1_pos = block_2_pos.copy()
+            block_1_pos[2] += 0.2
+            gripper_pos = block_1_pos.copy()
+            gripper_pos[2] += 0.2
+            goal_pos = np.concatenate([gripper_pos, block_0_pos, block_1_pos, block_2_pos])
+            print("Goal pos", goal_pos)
+            return goal_pos
 
         elif block == 0:
             block_1_pos = [0.0, 0.15, 0] + np.random.uniform(-0.02, 0.02, (3,))# pink block

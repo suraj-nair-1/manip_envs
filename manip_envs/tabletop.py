@@ -504,7 +504,7 @@ class Tabletop(SawyerXYZEnv):
     def log_diagnostics(self, paths = None, logger = None):
         pass
     
-    def get_goal(self, block):
+    def get_goal(self, block, fixed_angle=False):
         ''' Returns a random goal position depending on the desired block/door. 
             Must be rendered using save_goal_img to get actual image obs.'''
         goal_pos = None
@@ -514,11 +514,16 @@ class Tabletop(SawyerXYZEnv):
             angle = 0.
             while abs(angle - 0.) < 0.261799:
                 angle = np.random.uniform(-0.785398, 0.785398) # btween 45 degrees
+            if fixed_angle:
+                angle = 0.523599
             self.change_door_angle(angle)
             block_0_pos = self.data.qpos[9:12]
             block_1_pos = self.data.qpos[16:19]
             block_2_pos = self.data.qpos[23:26]
             gripper_pos = self.hand_init_pos.copy() 
+            # object_qpos = self.sim.data.get_joint_qpos('doorjoint')
+            gripper_pos = np.array([0.07, 0.8, 0.1])
+            # gripper_pos += np.random.uniform(-0.02, 0.02, (3,))
             goal_pos = np.concatenate([gripper_pos, block_0_pos, block_1_pos, block_2_pos])
             return goal_pos 
         

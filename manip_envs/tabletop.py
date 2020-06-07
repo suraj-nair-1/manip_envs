@@ -635,15 +635,23 @@ class Tabletop(SawyerXYZEnv):
         threshold = 0.05
         repeat = True
         _iters = 0
+        self.reset()
         while repeat:
             for i in range(3):
                 self.targetobj = i
                 if self.door: 
                     self.obj_init_pos = obs[(i+1)*3:((i+1)*3)+3]
+                    self._set_obj_xyz(self.obj_init_pos)
+                    object_qpos = self.sim.data.get_joint_qpos('objGeom{}_x'.format(i))
+                    object_qpos[:3 ] = self.obj_init_pos
+                    object_qpos[3:] = 0.
+                    self.sim.data.set_joint_qpos('objGeom{}_x'.format(i), object_qpos)
+                    object_qvel = self.sim.data.get_joint_qvel('objGeom{}_x'.format(i))
+                    object_qvel[:] = 0.
+                    self.sim.data.set_joint_qvel('objGeom{}_x'.format(i), object_qvel)
                 else:
                     self.obj_init_pos = obs[(i+1)*3:((i+1)*3)+2]
-                self._set_obj_xyz(self.obj_init_pos)
-            
+                    self._set_obj_xyz(self.obj_init_pos)
                 # qpos = self.sim.data.get_joint_qpos("objGeom{}_x".format(i))
                 # qpos[2] = 0.0
                 # self.sim.data.set_joint_qpos("objGeom{}_x".format(i), qpos)
@@ -659,6 +667,10 @@ class Tabletop(SawyerXYZEnv):
         _iters = 0
         if self.door: 
             self.change_door_angle(obs[-1])
+            # door_pos = np.array([obs[-1]])
+            door_vel = np.array([0.])
+            # self.sim.data.set_joint_qpos('doorjoint', door_pos)
+            self.sim.data.set_joint_qvel('doorjoint', door_vel)
         while repeat:
             pos = obs[:3]
             for _ in range(100): # Move gripper to pos
@@ -674,22 +686,22 @@ class Tabletop(SawyerXYZEnv):
             if _iters > 10:
                 break
                 
-        repeat = True
-        _iters = 0
-        while repeat:
-            for i in range(3):
-                self.targetobj = i
-                self.obj_init_pos = obs[(i+1)*3:((i+1)*3)+2]
-                self._set_obj_xyz(self.obj_init_pos)
+        # repeat = True
+        # _iters = 0
+        # while repeat:
+            # for i in range(3):
+                # self.targetobj = i
+                # self.obj_init_pos = obs[(i+1)*3:((i+1)*3)+2]
+                # self._set_obj_xyz(self.obj_init_pos)
                 
                 # qpos = self.sim.data.get_joint_qpos("objGeom{}_x".format(i))
                 # qpos[2] = 0.0
                 # self.sim.data.set_joint_qpos("objGeom{}_x".format(i), qpos)
-            error = np.linalg.norm(obs[3:12] - self.data.qpos[9:18])
-            repeat = (error >= threshold)
-            _iters += 1
-            if _iters > 10:
-                break
+            # error = np.linalg.norm(obs[3:12] - self.data.qpos[9:18])
+            # repeat = (error >= threshold)
+            # _iters += 1
+            # if _iters > 10:
+                # break
         imgs = []
         im = self.sim.render(48, 48, camera_name='cam0')
         imgs.append(im)

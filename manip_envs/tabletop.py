@@ -530,11 +530,14 @@ class Tabletop(SawyerXYZEnv):
         elif self.stack:
             # Goals are block1 stacked over block2, block0 untouched
             block_0_pos = [-0.1, 0.15, 0] + np.random.uniform(-0.02, 0.02, (3,)) # green block
+            block_0_pos[2] = 0.006
             block_2_pos = self.data.qpos[15:18] + np.random.uniform(-0.05, 0.05, (3,))
-            block_1_pos = block_2_pos.copy()
-            block_1_pos[2] += 0.2
-            gripper_pos = block_1_pos.copy()
-            gripper_pos[2] += 0.2
+            block_2_pos[2] = 0.025
+            block_1_pos = block_2_pos.copy() + np.random.uniform(-0.02, 0.02, (3,))
+            block_1_pos[2] = 0.025 * 3
+            gripper_pos = block_2_pos.copy()
+            gripper_pos[2] = -0.02
+            gripper_pos[1] += 0.1
             goal_pos = np.concatenate([gripper_pos, block_0_pos, block_1_pos, block_2_pos])
             print("Goal pos", goal_pos)
             return goal_pos
@@ -763,6 +766,19 @@ class Tabletop(SawyerXYZEnv):
 
         imgs = []
         im = self.sim.render(48, 48, camera_name='cam0')
+        return {'green_x': self.data.qpos[9], 
+                'green_y': self.data.qpos[10], 
+                'green_z': self.data.qpos[11], 
+                'pink_x': self.data.qpos[12], 
+                'pink_y': self.data.qpos[13], 
+                'pink_z': self.data.qpos[14],
+                'blue_x': self.data.qpos[15], 
+                'blue_y': self.data.qpos[16], 
+                'blue_z': self.data.qpos[17],
+                'hand_x': self.get_endeff_pos()[0],
+                'hand_y': self.get_endeff_pos()[1],
+                'hand_z': self.get_endeff_pos()[2],
+                'dist': - self.compute_reward()}
 
     def save_goal_img(self, PATH, goal, eps):
         '''Returns image with a given goal array of positions for the gripper and blocks.'''
@@ -791,7 +807,10 @@ class Tabletop(SawyerXYZEnv):
                         init_pos = [0.25, 0.4, 0.075]
                     self.obj_init_pos = init_pos
             else:
-                self.obj_init_pos = goal[(i+1)*3:((i+1)*3)+2]
+                if self.stack:
+                    self.obj_init_pos = goal[(i+1)*3:((i+1)*3)+3]
+                else:
+                    self.obj_init_pos = goal[(i+1)*3:((i+1)*3)+2]
                 self.obj_init_pos[:2] += np.random.normal(loc=0, scale=0.001, size=2)
                 
             self._set_obj_xyz(self.obj_init_pos)

@@ -531,9 +531,9 @@ class Tabletop(SawyerXYZEnv):
             # Goals are block1 stacked over block2, block0 untouched
             block_0_pos = [-0.1, 0.15, 0] + np.random.uniform(-0.02, 0.02, (3,)) # green block
             block_0_pos[2] = 0.006
-            block_2_pos = self.data.qpos[15:18] + np.random.uniform(-0.05, 0.05, (3,))
+            block_2_pos = self.data.qpos[15:18] + np.random.uniform(-0.04, 0.04, (3,))
             block_2_pos[2] = 0.025
-            block_1_pos = block_2_pos.copy() + np.random.uniform(-0.02, 0.02, (3,))
+            block_1_pos = block_2_pos.copy() + np.random.uniform(-0.015, 0.015, (3,))
             block_1_pos[2] = 0.025 * 3
             gripper_pos = block_2_pos.copy()
             gripper_pos[2] = -0.02

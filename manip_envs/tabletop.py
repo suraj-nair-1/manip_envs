@@ -382,6 +382,13 @@ class Tabletop(SawyerXYZEnv):
                     init_pos = [-.2, .15]
                 else:
                     init_pos = [ .2, -.1]
+            elif self.stack:
+                if i == 0:
+                       init_pos = [-.2, -0.15]
+                elif i == 1:
+                    init_pos = [-.1, .15]
+                else:
+                    init_pos = [ .1, .15]
             else:
                 init_pos = [0.1 * (i-1), 0.15] 
             if self.door:
@@ -394,8 +401,9 @@ class Tabletop(SawyerXYZEnv):
                         init_pos = [-0.12, 0.6, 0.075]
                     if i == 2:
                         init_pos = [0.25, 0.4, 0.075]
-                self.obj_init_pos = init_pos
-                self._set_obj_xyz(self.obj_init_pos)
+            self.obj_init_pos = init_pos
+            self._set_obj_xyz(self.obj_init_pos)
+            if self.door:
                 object_qpos = self.sim.data.get_joint_qpos('objGeom{}_x'.format(i))
                 object_qpos[:3 ] = init_pos
                 object_qpos[3:] = 0.
@@ -403,14 +411,7 @@ class Tabletop(SawyerXYZEnv):
                 object_qvel = self.sim.data.get_joint_qvel('objGeom{}_x'.format(i))
                 object_qvel[:] = 0.
                 self.sim.data.set_joint_qvel('objGeom{}_x'.format(i), object_qvel)
-            elif self.stack:
-                if i == 0:
-                    init_pos = [-.2, -0.15]
-                elif i == 1:
-                    init_pos = [-.1, .15]
-                else:
-                    init_pos = [ .1, .15]
-                
+               
         self.sim.forward()
         o = self.get_obs()
         
@@ -510,12 +511,14 @@ class Tabletop(SawyerXYZEnv):
         goal_pos = None
         if self.door:
             # If want to set door as the target, uncomment below
-            # hinge between +/- 90 degrees, at least abs > 20 degrees
+            # hinge between +/- 45 degrees, at least abs > 20 degrees
             angle = 0.
-            while abs(angle - 0.) < 0.261799:
-                angle = np.random.uniform(-0.785398, 0.785398) # btween 45 degrees
+            while abs(angle - 0.) < 0.0872665:# larger than 5 degrees angle
+                angle = np.random.uniform(-0.523599, 0.523599) # between 30 degrees
+            # while abs(angle - 0.) < 0.261799:
+            #    angle = np.random.uniform(-0.785398, 0.785398) # btween 45 degrees
             if fixed_angle:
-                angle = 0.523599
+                angle = 0.785398 # at 30 degrees: 0.523599
             self.change_door_angle(angle)
             block_0_pos = self.data.qpos[9:12]
             block_1_pos = self.data.qpos[16:19]

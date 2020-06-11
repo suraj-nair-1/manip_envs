@@ -523,6 +523,10 @@ class Tabletop(SawyerXYZEnv):
             block_0_pos = self.data.qpos[9:12]
             block_1_pos = self.data.qpos[16:19]
             block_2_pos = self.data.qpos[23:26]
+            if self.tower:
+                block_0_pos = [-0.15, 0.8, 0.075]
+                block_1_pos = [-0.12, 0.6, 0.075]
+                block_2_pos = [0.25, 0.4, 0.075]
             gripper_pos = self.hand_init_pos.copy() 
             # object_qpos = self.sim.data.get_joint_qpos('doorjoint')
             gripper_pos = np.array([0.07, 0.8, 0.1])
@@ -800,29 +804,18 @@ class Tabletop(SawyerXYZEnv):
         #  Move blocks to correct positions
         for i in range(3):
             self.targetobj = i
-            if self.door:
-                self.obj_init_pos = [-0.15, 0.75, 0.05 * (i+1)]
-                
-                if self.tower:
-                    if i == 0:
-                        init_pos = [-0.15, 0.8, 0.075]
-                    if i == 1:
-                        init_pos = [-0.12, 0.6, 0.075]
-                    if i == 2:
-                        init_pos = [0.25, 0.4, 0.075]
-                    self.obj_init_pos = init_pos
+            if self.stack or self.door:
+                init_pos = goal[(i+1)*3:((i+1)*3)+3]
+                self.obj_init_pos = goal[(i+1)*3:((i+1)*3)+3]
             else:
-                if self.stack:
-                    self.obj_init_pos = goal[(i+1)*3:((i+1)*3)+3]
-                else:
-                    self.obj_init_pos = goal[(i+1)*3:((i+1)*3)+2]
-                self.obj_init_pos[:2] += np.random.normal(loc=0, scale=0.001, size=2)
+                self.obj_init_pos = goal[(i+1)*3:((i+1)*3)+2]
+            self.obj_init_pos[:2] += np.random.normal(loc=0, scale=0.001, size=2)
                 
             self._set_obj_xyz(self.obj_init_pos)
 
             if self.door:
                 object_qpos = self.sim.data.get_joint_qpos('objGeom{}_x'.format(i))
-                object_qpos[:3 ] = init_pos
+                object_qpos[:3] = init_pos
                 object_qpos[3:] = 0.
                 self.sim.data.set_joint_qpos('objGeom{}_x'.format(i), object_qpos)
                 object_qvel = self.sim.data.get_joint_qvel('objGeom{}_x'.format(i))

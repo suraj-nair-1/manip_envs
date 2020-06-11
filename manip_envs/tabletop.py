@@ -505,7 +505,7 @@ class Tabletop(SawyerXYZEnv):
     def log_diagnostics(self, paths = None, logger = None):
         pass
     
-    def get_goal(self, block, fixed_angle=False):
+    def get_goal(self, block, fixed_angle=None):
         ''' Returns a random goal position depending on the desired block/door. 
             Must be rendered using save_goal_img to get actual image obs.'''
         goal_pos = None
@@ -517,8 +517,8 @@ class Tabletop(SawyerXYZEnv):
                 angle = np.random.uniform(-0.523599, 0.523599) # between 30 degrees
             # while abs(angle - 0.) < 0.261799:
             #    angle = np.random.uniform(-0.785398, 0.785398) # btween 45 degrees
-            if fixed_angle:
-                angle = 0.785398 # at 30 degrees: 0.523599
+            if fixed_angle is not None:
+                angle = fixed_angle
             self.change_door_angle(angle)
             block_0_pos = self.data.qpos[9:12]
             block_1_pos = self.data.qpos[16:19]
@@ -719,7 +719,9 @@ class Tabletop(SawyerXYZEnv):
             imgs.append(im)
             
         im = self.sim.render(48, 48, camera_name='cam0')
-        
+        if savename == None: 
+            return im
+
         with imageio.get_writer(
                 savename + '.gif', mode='I') as writer:
             for e in range(actions.shape[0] + 1):
@@ -783,7 +785,7 @@ class Tabletop(SawyerXYZEnv):
                 'hand_z': self.get_endeff_pos()[2],
                 'dist': - self.compute_reward()}
 
-    def save_goal_img(self, PATH, goal, eps):
+    def save_goal_img(self, PATH, goal, eps, step_thru=False, actions=None):
         '''Returns image with a given goal array of positions for the gripper and blocks.'''
         # Move end effector to green block by simulation
         pos = goal[:3]
@@ -828,6 +830,9 @@ class Tabletop(SawyerXYZEnv):
                 self.sim.data.set_joint_qvel('objGeom{}_x'.format(i), object_qvel)
          
             self.sim.forward()
+        # if step_thru: 
+            # only step thru actions if the flag is set to True & actions is not None
+
         im = self.sim.render(48, 48, camera_name='cam0') #cam0')
         return im
 

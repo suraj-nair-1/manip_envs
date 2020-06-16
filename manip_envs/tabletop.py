@@ -84,7 +84,7 @@ class Tabletop(SawyerXYZEnv):
         if goal_high is None:
             goal_high = self.hand_high
 
-        self.imsize= 48
+        self.imsize= 64
         self.lowdim = low_dim
         self.liftThresh = liftThresh
         self.rewMode = rewMode
@@ -112,7 +112,7 @@ class Tabletop(SawyerXYZEnv):
                 })
         else:
             if self.smm:
-                self.imsize = 48 #64
+                self.imsize = 64 #64
                 self.observation_space = Box(0, 1.0, (self.imsize*self.imsize*3, ))
             else: 
                 self.observation_space = Dict({
@@ -195,7 +195,7 @@ class Tabletop(SawyerXYZEnv):
             self.obj_memory2.append(block2)
                 
             if self.epcount % self.log_freq == 0:
-                im = self.sim.render(48, 48, camera_name='cam0')
+                im = self.sim.render(64, 64, camera_name='cam0')
                 self.imgs.append(im)
                 # cv2.imwrite(self.filepath + '/obs'+str(self.cur_path_length)+'.png', (cv2.cvtColor(im, cv2.COLOR_BGR2RGB)).astype(np.uint8))
                 
@@ -288,7 +288,7 @@ class Tabletop(SawyerXYZEnv):
 
     def render(self, mode=""):
         i =  self.sim.render(self.imsize, self.imsize, camera_name="cam0")  / 255. #cam0
-        i = np.swapaxes(i, 0, 2)
+        #i = np.swapaxes(i, 0, 2)
         return i
       
     def get_goal(self):
@@ -379,7 +379,7 @@ class Tabletop(SawyerXYZEnv):
                 if i == 0:
                     init_pos = [-.2, -0.15]
                 elif i == 1:
-                    init_pos = [-.2, .15]
+                    init_pos = [-.15, .1]
                 else:
                     init_pos = [ .2, -.1]
             elif self.stack:
@@ -417,7 +417,7 @@ class Tabletop(SawyerXYZEnv):
         
         if self.epcount % self.log_freq == 0:
             self.imgs = []
-            im = self.sim.render(48, 48, camera_name='cam0')
+            im = self.sim.render(64, 64, camera_name='cam0')
             self.imgs.append(im)
             #cv2.imwrite(self.filepath + '/init.png', (cv2.cvtColor(im, cv2.COLOR_BGR2RGB)).astype(np.uint8))
         #Can try changing this
@@ -557,16 +557,16 @@ class Tabletop(SawyerXYZEnv):
                     (-0.0, 0.25, 0.20), 
                     size=(3,)) 
             if self.hard:
-                block_1_pos = [-.2, .15, 0] + np.random.uniform(-0.02, 0.02, (3,))# pink block
+                block_1_pos = [-.1, .15, 0] + np.random.uniform(-0.02, 0.02, (3,))# pink block 
                 block_2_pos = [.2, -.1, 0] + np.random.uniform(-0.02, 0.02, (3,)) # blue block
                 block_0_pos = np.random.uniform( # green block
-                        (-.25, -0.2, 0.0),  
-                        (-.15, -0.1, 0.20), 
+                        (-.25, -0.17, 0.0),  
+                        (-.15, -0.13, 0.20), 
                         size=(3,)) 
             while np.linalg.norm(block_0_pos - block_1_pos) < 0.06 or np.linalg.norm(block_0_pos - block_2_pos) < 0.06: # ensure the blocks do not overlap
                 block_0_pos = np.random.uniform( # green block
-                        (-.25, -0.2, 0.0),  
-                        (-.15, -0.1, 0.20), 
+                        (-.25, -0.17, 0.0),  
+                        (-.15, -0.13, 0.20), 
                         size=(3,)) 
             block_0_pos += np.random.uniform(-0.02, 0.02, (3,))
             # Make goal pos: Random first block initialization, want gripper hovering over block 
@@ -587,13 +587,13 @@ class Tabletop(SawyerXYZEnv):
                 block_0_pos = [-.2, -.15, 0] + np.random.uniform(-0.02, 0.02, (3,))# pink block
                 block_2_pos = [.2, -.1, 0] + np.random.uniform(-0.02, 0.02, (3,)) # blue block
                 block_1_pos = np.random.uniform( # green block
-                        (-.25, 0.1, 0.0),  
-                        (-.15, 0.2, 0.20), 
+                        (-.2, 0.08, 0.0),  
+                        (-.1, 0.12, 0.20), 
                         size=(3,)) 
             while np.linalg.norm(block_1_pos - block_0_pos) < 0.06 or np.linalg.norm(block_1_pos - block_2_pos) < 0.06: # ensure the blocks do not overlap
                 block_1_pos = np.random.uniform( # green block
-                        (-.25, 0.1, 0.0),  
-                        (-.15, 0.2, 0.20), 
+                        (-.2, 0.08, 0.0),  
+                        (-.1, 0.12, 0.20), 
                         size=(3,))
             block_1_pos += np.random.uniform(-0.02, 0.02, (3,))
             # Make goal pos: Random first block initialization, want gripper hovering over block 
@@ -612,15 +612,15 @@ class Tabletop(SawyerXYZEnv):
                     size=(3,)) 
             if self.hard:
                 block_0_pos = [-.2, -.15, 0] + np.random.uniform(-0.02, 0.02, (3,))# pink block
-                block_1_pos = [-.2, .15, 0] + np.random.uniform(-0.02, 0.02, (3,))# pink block
+                block_1_pos = [-.1, .15, 0] + np.random.uniform(-0.02, 0.02, (3,))# pink block
                 block_2_pos = np.random.uniform( # green block
-                        (.15, -0.15, 0.0),  
-                        (.25, -0.05, 0.20), 
+                        (.15, -0.12, 0.0),  
+                        (.25, -0.08, 0.20), 
                         size=(3,)) 
             while np.linalg.norm(block_2_pos - block_1_pos) < 0.06 or np.linalg.norm(block_2_pos - block_0_pos) < 0.06: # ensure the blocks do not overlap
                 block_2_pos = np.random.uniform( # green block
-                    (.15, -0.15, 0.0),  
-                    (.25, -0.05, 0.20), 
+                    (.15, -0.12, 0.0),  
+                    (.25, -0.08, 0.20), 
                     size=(3,)) 
             block_2_pos += np.random.uniform(-0.02, 0.02, (3,))
             # Make goal pos: Random first block initialization, want gripper hovering over block 
@@ -635,7 +635,7 @@ class Tabletop(SawyerXYZEnv):
         of gripper-block distances. 
     '''
     def save_img(self):
-        im = self.sim.render(48, 48, camera_name ='cam0')
+        im = self.sim.render(64, 64, camera_name ='cam0')
         return im
 
     
@@ -713,16 +713,16 @@ class Tabletop(SawyerXYZEnv):
             # if _iters > 10:
                 # break
         imgs = []
-        im = self.sim.render(48, 48, camera_name='cam0')
+        im = self.sim.render(64, 64, camera_name='cam0')
         imgs.append(im)
         for i in range(actions.shape[0]):
             action = actions[i]
             self.set_xyz_action_rotz(action[:4])
             self.do_simulation([action[-1], -action[-1]])
-            im = self.sim.render(48, 48, camera_name='cam0')
+            im = self.sim.render(64, 64, camera_name='cam0')
             imgs.append(im)
             
-        im = self.sim.render(48, 48, camera_name='cam0')
+        im = self.sim.render(64, 64, camera_name='cam0')
         if savename == None: 
             return im
 
@@ -750,7 +750,7 @@ class Tabletop(SawyerXYZEnv):
                 if i == 0:
                     init_pos = [-.2, -0.15]
                 elif i == 1:
-                    init_pos = [-.2, .15]
+                    init_pos = [-.1, .15]
                 else:
                     init_pos = [ .2, -.1]
             else:
@@ -774,7 +774,7 @@ class Tabletop(SawyerXYZEnv):
             self._set_obj_xyz(self.obj_init_pos)
 
         imgs = []
-        im = self.sim.render(48, 48, camera_name='cam0')
+        im = self.sim.render(64, 64, camera_name='cam0')
         return {'green_x': self.data.qpos[9], 
                 'green_y': self.data.qpos[10], 
                 'green_z': self.data.qpos[11], 
@@ -826,7 +826,7 @@ class Tabletop(SawyerXYZEnv):
         # if step_thru: 
             # only step thru actions if the flag is set to True & actions is not None
 
-        im = self.sim.render(48, 48, camera_name='cam0') #cam0')
+        im = self.sim.render(64, 64, camera_name='cam0') #cam0')
         return im
 
     

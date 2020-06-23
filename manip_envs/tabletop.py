@@ -338,7 +338,7 @@ class Tabletop(SawyerXYZEnv):
             self.block1_interaction = []
             self.block2_interaction = []
 
-    def reset_model(self):
+    def reset_model(self, no_reset=False, add_noise=False):
         ''' For logging '''
         if self.verbose:
             if self.epcount % self.log_freq == 0:
@@ -356,63 +356,65 @@ class Tabletop(SawyerXYZEnv):
                     self.block2_interaction = []
                 self.save_gif()
         self.cur_path_length = 0
-        self._reset_hand()
         self.epcount += 1
-        buffer_dis = 0.04
-        block_pos = None
         
-        for _ in range(100):
-            self.do_simulation([0.0, 0.0])
-        self.targetobj = np.random.randint(3)
-        self.sample_goal()
-        self.cur_path_length = 0
-        
-        for i in range(3):
-            self.targetobj = i
-            if self.randomize:
-                init_pos = np.random.uniform(
-                -0.2,
-                0.2,
-                size=(2,),
-            )
-            elif self.hard:
-                if i == 0:
-                    init_pos = [-.2, -0.15]
-                elif i == 1:
-                    init_pos = [-.15, .1]
-                else:
-                    init_pos = [ .2, -.1]
-            elif self.stack:
-                if i == 0:
-                       init_pos = [-.2, -0.15]
-                elif i == 1:
-                    init_pos = [-.1, .15]
-                else:
-                    init_pos = [ .1, .15]
-            else:
-                init_pos = [0.1 * (i-1), 0.15] 
-            if self.door:
-                init_pos = [-0.15, 0.75, 0.05 * (i+1)]
-                init_pos[:2] += np.random.normal(loc=0, scale=0.001, size=2)
-                if self.tower:
+        if not no_reset: # reset initial block pos
+            self._reset_hand()
+            for _ in range(100):
+                self.do_simulation([0.0, 0.0])
+            self.targetobj = np.random.randint(3)
+            self.sample_goal()
+            self.cur_path_length = 0
+
+            for i in range(3):
+                self.targetobj = i
+                if self.randomize:
+                    init_pos = np.random.uniform(
+                    -0.2,
+                    0.2,
+                    size=(2,),
+                )
+                elif self.hard:
                     if i == 0:
-                        init_pos = [-0.15, 0.8, 0.075]
-                    if i == 1:
-                        init_pos = [-0.12, 0.6, 0.075]
-                    if i == 2:
-                        init_pos = [0.25, 0.4, 0.075]
-            self.obj_init_pos = init_pos
-            self._set_obj_xyz(self.obj_init_pos)
-            if self.door:
-                object_qpos = self.sim.data.get_joint_qpos('objGeom{}_x'.format(i))
-                object_qpos[:3 ] = init_pos
-                object_qpos[3:] = 0.
-                self.sim.data.set_joint_qpos('objGeom{}_x'.format(i), object_qpos)
-                object_qvel = self.sim.data.get_joint_qvel('objGeom{}_x'.format(i))
-                object_qvel[:] = 0.
-                self.sim.data.set_joint_qvel('objGeom{}_x'.format(i), object_qvel)
-               
-        self.sim.forward()
+                        init_pos = [-.2, -0.15]
+                    elif i == 1:
+                        init_pos = [-.1, .15]
+                    else:
+                        init_pos = [ .2, -.1]
+                elif self.stack:
+                    if i == 0:
+                           init_pos = [-.2, -0.15]
+                    elif i == 1:
+                        init_pos = [-.1, .15]
+                    else:
+                        init_pos = [ .1, .15]
+                else:
+                    init_pos = [0.1 * (i-1), 0.15] 
+                if self.door:
+                    init_pos = [-0.15, 0.75, 0.05 * (i+1)]
+                    init_pos[:2] += np.random.normal(loc=0, scale=0.001, size=2)
+                    if self.tower:
+                        if i == 0:
+                            init_pos = [-0.15, 0.8, 0.075]
+                        if i == 1:
+                            init_pos = [-0.12, 0.6, 0.075]
+                        if i == 2:
+                            init_pos = [0.25, 0.4, 0.075]
+                if add_noise:
+                    init_pos += np.random.uniform(-0.02, 0.02, (2,))
+                
+                self.obj_init_pos = init_pos
+                self._set_obj_xyz(self.obj_init_pos)
+                if self.door:
+                    object_qpos = self.sim.data.get_joint_qpos('objGeom{}_x'.format(i))
+                    object_qpos[:3 ] = init_pos
+                    object_qpos[3:] = 0.
+                    self.sim.data.set_joint_qpos('objGeom{}_x'.format(i), object_qpos)
+                    object_qvel = self.sim.data.get_joint_qvel('objGeom{}_x'.format(i))
+                    object_qvel[:] = 0.
+                    self.sim.data.set_joint_qvel('objGeom{}_x'.format(i), object_qvel)
+            self.sim.forward()
+        
         o = self.get_obs()
         
         if self.epcount % self.log_freq == 0:
@@ -560,13 +562,13 @@ class Tabletop(SawyerXYZEnv):
                 block_1_pos = [-.1, .15, 0] + np.random.uniform(-0.02, 0.02, (3,))# pink block 
                 block_2_pos = [.2, -.1, 0] + np.random.uniform(-0.02, 0.02, (3,)) # blue block
                 block_0_pos = np.random.uniform( # green block
-                        (-.25, -0.17, 0.0),  
-                        (-.15, -0.13, 0.20), 
+                        (-.25, -0.2, 0.0),  
+                        (-.15, -0.1, 0.20), 
                         size=(3,)) 
             while np.linalg.norm(block_0_pos - block_1_pos) < 0.06 or np.linalg.norm(block_0_pos - block_2_pos) < 0.06: # ensure the blocks do not overlap
                 block_0_pos = np.random.uniform( # green block
-                        (-.25, -0.17, 0.0),  
-                        (-.15, -0.13, 0.20), 
+                        (-.22, -0.16, 0.0),  
+                        (-.18, -0.14, 0.20), 
                         size=(3,)) 
             block_0_pos += np.random.uniform(-0.02, 0.02, (3,))
             # Make goal pos: Random first block initialization, want gripper hovering over block 
@@ -586,21 +588,21 @@ class Tabletop(SawyerXYZEnv):
             if self.hard:
                 block_0_pos = [-.2, -.15, 0] + np.random.uniform(-0.02, 0.02, (3,))# pink block
                 block_2_pos = [.2, -.1, 0] + np.random.uniform(-0.02, 0.02, (3,)) # blue block
-                block_1_pos = np.random.uniform( # green block
-                        (-.2, 0.08, 0.0),  
-                        (-.1, 0.12, 0.20), 
+                block_1_pos = np.random.uniform( 
+                        (-.15, 0.10, 0.0),  
+                        (-.05, 0.20, 0.20), 
                         size=(3,)) 
             while np.linalg.norm(block_1_pos - block_0_pos) < 0.06 or np.linalg.norm(block_1_pos - block_2_pos) < 0.06: # ensure the blocks do not overlap
-                block_1_pos = np.random.uniform( # green block
-                        (-.2, 0.08, 0.0),  
-                        (-.1, 0.12, 0.20), 
+                block_1_pos = np.random.uniform( 
+                        (-.15, 0.13, 0.0),  
+                        (-.05, 0.17, 0.20), 
                         size=(3,))
             block_1_pos += np.random.uniform(-0.02, 0.02, (3,))
             # Make goal pos: Random first block initialization, want gripper hovering over block 
             gripper_pos = block_1_pos.copy()
             gripper_pos += np.random.uniform(-0.02, 0.02, (3,))
             gripper_pos[1] += 0.6 # need to adjust for middle of the table for the gripper being (0.0, 0.6)
-            gripper_pos[2] = np.random.uniform(0.0, 0.20)
+            gripper_pos[2] = 0.16 #np.random.uniform(0.0, 0.20)
             goal_pos = np.concatenate((gripper_pos, block_0_pos, block_1_pos, block_2_pos))
 
         elif block == 2:
@@ -614,8 +616,8 @@ class Tabletop(SawyerXYZEnv):
                 block_0_pos = [-.2, -.15, 0] + np.random.uniform(-0.02, 0.02, (3,))# pink block
                 block_1_pos = [-.1, .15, 0] + np.random.uniform(-0.02, 0.02, (3,))# pink block
                 block_2_pos = np.random.uniform( # green block
-                        (.15, -0.12, 0.0),  
-                        (.25, -0.08, 0.20), 
+                        (.15, -0.15, 0.0),  
+                        (.25, -0.05, 0.20), 
                         size=(3,)) 
             while np.linalg.norm(block_2_pos - block_1_pos) < 0.06 or np.linalg.norm(block_2_pos - block_0_pos) < 0.06: # ensure the blocks do not overlap
                 block_2_pos = np.random.uniform( # green block

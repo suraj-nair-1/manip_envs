@@ -413,7 +413,8 @@ class Tabletop(SawyerXYZEnv):
                     object_qvel = self.sim.data.get_joint_qvel('objGeom{}_x'.format(i))
                     object_qvel[:] = 0.
                     self.sim.data.set_joint_qvel('objGeom{}_x'.format(i), object_qvel)
-            self.sim.forward()
+                    self.change_door_angle(0.0)
+        self.sim.forward()
         
         o = self.get_obs()
         
@@ -516,9 +517,7 @@ class Tabletop(SawyerXYZEnv):
             # hinge between +/- 45 degrees, at least abs > 20 degrees
             angle = 0.
             while abs(angle - 0.) < 0.0872665:# larger than 5 degrees angle
-                angle = np.random.uniform(-0.523599, 0.523599) # between 30 degrees
-            # while abs(angle - 0.) < 0.261799:
-            #    angle = np.random.uniform(-0.785398, 0.785398) # btween 45 degrees
+                angle = np.random.uniform(-0.785398, 0.785398)
             if fixed_angle is not None:
                 angle = fixed_angle
             self.change_door_angle(angle)
@@ -529,9 +528,10 @@ class Tabletop(SawyerXYZEnv):
                 block_0_pos = [-0.15, 0.8, 0.075]
                 block_1_pos = [-0.12, 0.6, 0.075]
                 block_2_pos = [0.25, 0.4, 0.075]
-            gripper_pos = self.hand_init_pos.copy() 
-            # object_qpos = self.sim.data.get_joint_qpos('doorjoint')
-            gripper_pos = np.array([0.07, 0.8, 0.1])
+            # gripper_pos = self.hand_init_pos.copy() 
+            handle = self.sim.data.get_geom_xpos('handle')            
+            print("handle pos: {}".format(handle))
+            gripper_pos = handle
             # gripper_pos += np.random.uniform(-0.02, 0.02, (3,))
             goal_pos = np.concatenate([gripper_pos, block_0_pos, block_1_pos, block_2_pos])
             return goal_pos 

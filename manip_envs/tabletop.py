@@ -516,10 +516,11 @@ class Tabletop(SawyerXYZEnv):
             # If want to set door as the target, uncomment below
             # hinge between +/- 45 degrees, at least abs > 20 degrees
             angle = 0.
-            while abs(angle - 0.) < 0.0872665:# larger than 5 degrees angle
+            while abs(angle) < 0.0872665:# larger than 5 degrees angle
                 angle = np.random.uniform(-0.785398, 0.785398)
             if fixed_angle is not None:
                 angle = fixed_angle
+            print("door angle set to {}".format(angle))
             self.change_door_angle(angle)
             block_0_pos = self.data.qpos[9:12]
             block_1_pos = self.data.qpos[16:19]
@@ -532,9 +533,9 @@ class Tabletop(SawyerXYZEnv):
             handle = self.sim.data.get_geom_xpos('handle')            
             print("handle pos: {}".format(handle))
             gripper_pos = handle
-            # gripper_pos += np.random.uniform(-0.02, 0.02, (3,))
+            gripper_pos += np.random.uniform(-0.02, 0.02, (3,))
             goal_pos = np.concatenate([gripper_pos, block_0_pos, block_1_pos, block_2_pos])
-            return goal_pos 
+            return angle, goal_pos 
         
         elif self.stack:
             # Goals are block1 stacked over block2, block0 untouched
@@ -791,7 +792,7 @@ class Tabletop(SawyerXYZEnv):
                 'hand_z': self.get_endeff_pos()[2],
                 'dist': - self.compute_reward()}
 
-    def save_goal_img(self, PATH, goal, eps, step_thru=False, actions=None):
+    def save_goal_img(self, PATH, goal, eps, step_thru=False, actions=None, angle=None):
         '''Returns image with a given goal array of positions for the gripper and blocks.'''
         # Move end effector to green block by simulation
         pos = goal[:3]
@@ -823,7 +824,8 @@ class Tabletop(SawyerXYZEnv):
                 object_qvel = self.sim.data.get_joint_qvel('objGeom{}_x'.format(i))
                 object_qvel[:] = 0.
                 self.sim.data.set_joint_qvel('objGeom{}_x'.format(i), object_qvel)
-         
+            if angle is not None:
+                self.change_door_angle(angle)
             self.sim.forward()
         # if step_thru: 
             # only step thru actions if the flag is set to True & actions is not None

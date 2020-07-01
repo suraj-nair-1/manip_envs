@@ -376,7 +376,7 @@ class Tabletop(SawyerXYZEnv):
                 )
                 elif self.hard:
                     if i == 0:
-                        init_pos = [-.2, -0.15]
+                        init_pos = [-.2, 0] #-0.15]
                     elif i == 1:
                         init_pos = [-.1, .15]
                     else:
@@ -563,8 +563,8 @@ class Tabletop(SawyerXYZEnv):
                 block_1_pos = [-.1, .15, 0] + np.random.uniform(-0.02, 0.02, (3,))# pink block 
                 block_2_pos = [.2, -.1, 0] + np.random.uniform(-0.02, 0.02, (3,)) # blue block
                 block_0_pos = np.random.uniform( # green block
-                        (-.25, -0.2, 0.0),  
-                        (-.15, -0.1, 0.20), 
+                        (-.22, -0.02, 0.0),  
+                        (-.18, 0.02, 0.20), 
                         size=(3,)) 
             while np.linalg.norm(block_0_pos - block_1_pos) < 0.06 or np.linalg.norm(block_0_pos - block_2_pos) < 0.06: # ensure the blocks do not overlap
                 block_0_pos = np.random.uniform( # green block
@@ -590,8 +590,8 @@ class Tabletop(SawyerXYZEnv):
                 block_0_pos = [-.2, -.15, 0] + np.random.uniform(-0.02, 0.02, (3,))# pink block
                 block_2_pos = [.2, -.1, 0] + np.random.uniform(-0.02, 0.02, (3,)) # blue block
                 block_1_pos = np.random.uniform( 
-                        (-.15, 0.10, 0.0),  
-                        (-.05, 0.20, 0.20), 
+                        (-.12, 0.13, 0.0),  
+                        (-.08, 0.17, 0.20), 
                         size=(3,)) 
             while np.linalg.norm(block_1_pos - block_0_pos) < 0.06 or np.linalg.norm(block_1_pos - block_2_pos) < 0.06: # ensure the blocks do not overlap
                 block_1_pos = np.random.uniform( 
@@ -617,8 +617,8 @@ class Tabletop(SawyerXYZEnv):
                 block_0_pos = [-.2, -.15, 0] + np.random.uniform(-0.02, 0.02, (3,))# pink block
                 block_1_pos = [-.1, .15, 0] + np.random.uniform(-0.02, 0.02, (3,))# pink block
                 block_2_pos = np.random.uniform( # green block
-                        (.15, -0.15, 0.0),  
-                        (.25, -0.05, 0.20), 
+                        (.18, -0.12, 0.0),  
+                        (.22, -0.08, 0.20), 
                         size=(3,)) 
             while np.linalg.norm(block_2_pos - block_1_pos) < 0.06 or np.linalg.norm(block_2_pos - block_0_pos) < 0.06: # ensure the blocks do not overlap
                 block_2_pos = np.random.uniform( # green block
@@ -751,7 +751,7 @@ class Tabletop(SawyerXYZEnv):
             self.targetobj = i
             if self.hard:
                 if i == 0:
-                    init_pos = [-.2, -0.15]
+                    init_pos = [-.2, 0] #-0.15]
                 elif i == 1:
                     init_pos = [-.1, .15]
                 else:

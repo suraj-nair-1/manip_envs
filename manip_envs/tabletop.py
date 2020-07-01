@@ -42,6 +42,7 @@ class Tabletop(SawyerXYZEnv):
             filepath="test",
             max_path_length=50,
             verbose=1,
+            double_target=False,
             hard=False,
             log_freq=100, # in terms of episode num
             smm=True, #False,
@@ -50,6 +51,7 @@ class Tabletop(SawyerXYZEnv):
     ):
         self.randomize = False
         self.smm = smm
+        self.double_target = double_target
         self.tower = tower # Makes blocks tall when door is added to the env
         self.debug_count = 0
         self.door = door # if True, add door to the env
@@ -155,6 +157,8 @@ class Tabletop(SawyerXYZEnv):
                 filename = os.path.join(dirname, "../assets/sawyer_xyz/sawyer_multiobject_door_v2.xml") # three stacked blocks plus door
                 if self.tower:
                     filename = os.path.join(dirname, "../assets/sawyer_xyz/sawyer_multiobject_door_v3.xml") # three tall blocks spread out plus door
+                if self.double_target:
+                    filename = os.path.join(dirname, "../assets/sawyer_xyz/sawyer_multiobject_door_block.xml")
             elif self.stack:
                 filename = os.path.join(dirname, "../assets/sawyer_xyz/sawyer_multiobject_stack.xml")
             else:
@@ -393,7 +397,7 @@ class Tabletop(SawyerXYZEnv):
                 if self.door:
                     init_pos = [-0.15, 0.75, 0.05 * (i+1)]
                     init_pos[:2] += np.random.normal(loc=0, scale=0.001, size=2)
-                    if self.tower:
+                    if self.tower or self.double_target:
                         if i == 0:
                             init_pos = [-0.15, 0.8, 0.075]
                         if i == 1:
@@ -520,12 +524,11 @@ class Tabletop(SawyerXYZEnv):
                 angle = np.random.uniform(-0.785398, 0.785398)
             if fixed_angle is not None:
                 angle = fixed_angle
-            print("door angle set to {}".format(angle))
             self.change_door_angle(angle)
             block_0_pos = self.data.qpos[9:12]
             block_1_pos = self.data.qpos[16:19]
             block_2_pos = self.data.qpos[23:26]
-            if self.tower:
+            if self.tower or self.double_target:
                 block_0_pos = [-0.15, 0.8, 0.075]
                 block_1_pos = [-0.12, 0.6, 0.075]
                 block_2_pos = [0.25, 0.4, 0.075]
@@ -533,7 +536,12 @@ class Tabletop(SawyerXYZEnv):
             handle = self.sim.data.get_geom_xpos('handle')            
             print("handle pos: {}".format(handle))
             gripper_pos = handle
-            gripper_pos += np.random.uniform(-0.02, 0.02, (3,))
+            gripper_pos[:2] += np.random.uniform(-0.01, 0.01, (2,))
+            if self.double_target and block is not None:
+                block_1_pos[:2] += np.random.uniform(-.05, 0.05, (2,))
+                gripper_pos = block_1_pos.copy()
+                gripper_pos[:2] += np.random.uniform(-0.02, 0.02, (2,))
+                gripper_pos[-1] += np.random.uniform(-0.01, 0.01, (1,))
             goal_pos = np.concatenate([gripper_pos, block_0_pos, block_1_pos, block_2_pos])
             return angle, goal_pos 
         
@@ -762,7 +770,7 @@ class Tabletop(SawyerXYZEnv):
                 init_pos = [-0.15, 0.75, 0.05 * (i+1)]
                 init_pos[:2] += np.random.normal(loc=0, scale=0.001, size=2)
             
-                if self.tower:
+                if self.tower or self.double_target:
                     if i == 0:
                         init_pos = [-0.15, 0.8, 0.075]
                     if i == 1:
@@ -824,12 +832,12 @@ class Tabletop(SawyerXYZEnv):
                 object_qvel = self.sim.data.get_joint_qvel('objGeom{}_x'.format(i))
                 object_qvel[:] = 0.
                 self.sim.data.set_joint_qvel('objGeom{}_x'.format(i), object_qvel)
-            if angle is not None:
-                self.change_door_angle(angle)
             self.sim.forward()
         # if step_thru: 
             # only step thru actions if the flag is set to True & actions is not None
-
+        if angle is not None:
+            self.change_door_angle(angle)
+            print("angle in save goal img")
         im = self.sim.render(64, 64, camera_name='cam0') #cam0')
         return im
 

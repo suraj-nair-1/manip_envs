@@ -412,11 +412,12 @@ class Tabletop(SawyerXYZEnv):
                 
                 self.obj_init_pos = init_pos
                 self._set_obj_xyz(self.obj_init_pos)
-                # if self.door:
-                #    object_qpos = self.sim.data.get_joint_qpos('objGeom{}_x'.format(i))
-                #    object_qpos[:3 ] = init_pos
-                #    object_qpos[3:] = 0.
-                #    self.sim.data.set_joint_qpos('objGeom{}_x'.format(i), object_qpos)
+                # tower pos needs to be initialized via set_joint_qpos
+                if self.door:
+                    object_qpos = self.sim.data.get_joint_qpos('objGeom{}_x'.format(i))
+                    object_qpos[:3 ] = init_pos
+                    object_qpos[3:] = 0.
+                    self.sim.data.set_joint_qpos('objGeom{}_x'.format(i), object_qpos)
         if self.door or self.double_target:
             self.change_door_angle(0.0)
         self.sim.forward()

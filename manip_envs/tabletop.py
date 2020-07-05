@@ -809,7 +809,6 @@ class Tabletop(SawyerXYZEnv):
             # only step thru actions if the flag is set to True & actions is not None
         if angle is not None:
             self.change_door_angle(angle)
-            print("angle in save goal img")
         im = self.sim.render(64, 64, camera_name='cam0') #cam0')
         return im
 

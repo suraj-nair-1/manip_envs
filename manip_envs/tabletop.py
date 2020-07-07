@@ -36,6 +36,7 @@ class Tabletop(SawyerXYZEnv):
             problem="rand",
             door=True, #Add door to the env
             tower=True,
+            drawer=False,
             stack = False,
             exploration = "hard",
             low_dim=False, #True,
@@ -57,6 +58,7 @@ class Tabletop(SawyerXYZEnv):
         self.door = door # if True, add door to the env
         self.hard = hard # if True, blocks are initialized to diff corners
         self.stack = stack # if True, then goal ims are stacked blocks
+        self.drawer = drawer
         self.exploration = exploration
         self.max_path_length = max_path_length
         self.cur_path_length = 0
@@ -159,6 +161,8 @@ class Tabletop(SawyerXYZEnv):
                     filename = os.path.join(dirname, "../assets/sawyer_xyz/sawyer_multiobject_door_v3.xml") # three tall blocks spread out plus door
                 if self.double_target:
                     filename = os.path.join(dirname, "../assets/sawyer_xyz/sawyer_multiobject_door_block.xml")
+            elif self.drawer:
+                filename = os.path.join(dirname, "../assets/sawyer_xyz/sawyer_cluttered_drawer.xml") # cluttered drawer
             elif self.stack:
                 filename = os.path.join(dirname, "../assets/sawyer_xyz/sawyer_multiobject_stack.xml")
             else:
@@ -226,6 +230,30 @@ class Tabletop(SawyerXYZEnv):
                                       'hand_y': self.get_endeff_pos()[1],
                                       'hand_z': self.get_endeff_pos()[2],
                                       'dist': - self.compute_reward()}
+        elif self.drawer:
+            return ob, reward, done, {'block0_x': self.data.get_site_xpos('obj0')[0], 
+                                      'block0_y': self.data.get_site_xpos('obj0')[1], 
+                                      'block0_z': self.data.get_site_xpos('obj0')[2], 
+                                      'block1_x': self.data.get_site_xpos('obj1')[0], 
+                                      'block1_y': self.data.get_site_xpos('obj1')[1], 
+                                      'block1_z': self.data.get_site_xpos('obj1')[2], 
+                                      'block2_x': self.data.get_site_xpos('obj2')[0], 
+                                      'block2_y': self.data.get_site_xpos('obj2')[1], 
+                                      'block2_z': self.data.get_site_xpos('obj2')[2], 
+                                      'block3_x': self.data.get_site_xpos('obj3')[0], 
+                                      'block3_y': self.data.get_site_xpos('obj3')[1], 
+                                      'block3_z': self.data.get_site_xpos('obj3')[2], 
+                                      'block4_x': self.data.get_site_xpos('obj4')[0], 
+                                      'block4_y': self.data.get_site_xpos('obj4')[1], 
+                                      'block4_z': self.data.get_site_xpos('obj4')[2], 
+                                      'block5_x': self.data.get_site_xpos('obj5')[0], 
+                                      'block5_y': self.data.get_site_xpos('obj5')[1], 
+                                      'block5_z': self.data.get_site_xpos('obj5')[2], 
+                                      'drawer': self.data.qpos[-1],
+                                      'hand_x': self.get_endeff_pos()[0],
+                                      'hand_y': self.get_endeff_pos()[1],
+                                      'hand_z': self.get_endeff_pos()[2],
+                                      'dist': - self.compute_reward()}
 
         return ob, reward, done, {'green_x': self.data.qpos[9], 
                                   'green_y': self.data.qpos[10], 
@@ -280,6 +308,8 @@ class Tabletop(SawyerXYZEnv):
         qvel = self.data.qvel.flat.copy()
         if self.door:
             start_id = 9 + self.targetobj*7
+        elif self.drawer:
+            start_id = 18 + self.targetobj*7
         else:
             start_id = 9 + self.targetobj*3
         if len(pos) < 3:
@@ -307,6 +337,8 @@ class Tabletop(SawyerXYZEnv):
         start_id = 9 + self.targetobj*3
         if self.door:
             start_id = 9 + self.targetobj*7
+        elif self.drawer:
+            start_id = 18 + self.targetobj*7
         qpos = self.data.qpos.flat.copy()
         ogpos = qpos[start_id:(start_id+2)]
         goal_pos = np.random.uniform(
@@ -407,19 +439,37 @@ class Tabletop(SawyerXYZEnv):
                     object_qvel = self.sim.data.get_joint_qvel('objGeom{}_x'.format(i))
                     object_qvel[:] = 0.
                     self.sim.data.set_joint_qvel('objGeom{}_x'.format(i), object_qvel)
+                elif self.drawer:
+                    if i == 0:
+                        init_pos = [-0.15, 0.8, 0.075]
+                    if i == 1:
+                        init_pos = [-0.12, 0.6, 0.075]
+                    if i == 2:
+                        init_pos = [0.25, 0.4, 0.075]
+                    if i == 3:
+                        init_pos = [-0.15, 0.4, 0.075]
+                    if i == 4:
+                        init_pos = [0.2, 0.6, 0.075]
+                    if i == 5:
+                        init_pos = [-0.2, 0.7, 0.075]
+                    object_qvel = self.sim.data.get_joint_qvel('objGeom{}_x'.format(i))
+                    object_qvel[:] = 0.
+                    self.sim.data.set_joint_qvel('objGeom{}_x'.format(i), object_qvel)
                 if add_noise:
                     init_pos += np.random.uniform(-0.02, 0.02, (2,))
                 
                 self.obj_init_pos = init_pos
                 self._set_obj_xyz(self.obj_init_pos)
                 # tower pos needs to be initialized via set_joint_qpos
-                if self.door:
+                if self.door or self.drawer:
                     object_qpos = self.sim.data.get_joint_qpos('objGeom{}_x'.format(i))
                     object_qpos[:3 ] = init_pos
                     object_qpos[3:] = 0.
                     self.sim.data.set_joint_qpos('objGeom{}_x'.format(i), object_qpos)
         if self.door or self.double_target:
             self.change_door_angle(0.0)
+        elif self.drawer:
+            self.data.qpos[-1] = 0.0
         self.sim.forward()
         
         o = self.get_obs()
@@ -446,6 +496,30 @@ class Tabletop(SawyerXYZEnv):
 
         if self.door:
             low_dim_info['door_joint'] = self.data.qpos[-1]
+        elif self.drawer:
+            low_dim_info = {'block0_x': self.data.get_site_xpos('obj0')[0], 
+                                      'block0_y': self.data.get_site_xpos('obj0')[1], 
+                                      'block0_z': self.data.get_site_xpos('obj0')[2], 
+                                      'block1_x': self.data.get_site_xpos('obj1')[0], 
+                                      'block1_y': self.data.get_site_xpos('obj1')[1], 
+                                      'block1_z': self.data.get_site_xpos('obj1')[2], 
+                                      'block2_x': self.data.get_site_xpos('obj2')[0], 
+                                      'block2_y': self.data.get_site_xpos('obj2')[1], 
+                                      'block2_z': self.data.get_site_xpos('obj2')[2], 
+                                      'block3_x': self.data.get_site_xpos('obj3')[0], 
+                                      'block3_y': self.data.get_site_xpos('obj3')[1], 
+                                      'block3_z': self.data.get_site_xpos('obj3')[2], 
+                                      'block4_x': self.data.get_site_xpos('obj4')[0], 
+                                      'block4_y': self.data.get_site_xpos('obj4')[1], 
+                                      'block4_z': self.data.get_site_xpos('obj4')[2], 
+                                      'block5_x': self.data.get_site_xpos('obj5')[0], 
+                                      'block5_y': self.data.get_site_xpos('obj5')[1], 
+                                      'block5_z': self.data.get_site_xpos('obj5')[2], 
+                                      'drawer': self.data.qpos[-1],
+                                      'hand_x': self.get_endeff_pos()[0],
+                                      'hand_y': self.get_endeff_pos()[1],
+                                      'hand_z': self.get_endeff_pos()[2],
+                                      'dist': - self.compute_reward()}
 
          #   return o, { 'green_x': self.data.get_site_xpos('obj0')[0], 
          #               'green_y': self.data.get_site_xpos('obj0')[1], 
@@ -559,6 +633,21 @@ class Tabletop(SawyerXYZEnv):
                 gripper_pos[:2] += np.random.uniform(-0.02, 0.02, (2,))
                 gripper_pos[-1] += np.random.uniform(-0.01, 0.01, (1,))
             goal_pos = np.concatenate([gripper_pos, block_0_pos, block_1_pos, block_2_pos])
+            
+        elif self.drawer:
+            while abs(angle) < 0.0872665:# larger than 5 degrees angle
+                angle = np.random.uniform(-0.785398, 0.785398)
+            if fixed_angle is not None:
+                angle = fixed_angle
+            block_0_pos = [-0.15, 0.8, 0.075]
+            block_1_pos = [-0.12, 0.6, 0.075]
+            block_2_pos = [0.25, 0.4, 0.075]
+            block_3_pos = [-0.15, 0.4, 0.075]
+            block_4_pos = [0.2, 0.6, 0.075]
+            block_5_pos = [-0.2, 0.7, 0.075]
+            gripper_pos = self.sim.data.get_geom_xpos('handle')
+            goal_pos = np.concatenate([gripper_pos, block_0_pos, block_1_pos, block_2_pos, block_3_pos, block_4_pos, block_5_pos])
+            
         elif self.stack:
             # Goals are block1 stacked over block2, block0 untouched
             block_0_pos = [-0.1, 0.15, 0] + np.random.uniform(-0.02, 0.02, (3,)) # green block
@@ -649,7 +738,7 @@ class Tabletop(SawyerXYZEnv):
         
         goal_pos = np.concatenate((gripper_pos, block_0_pos, block_1_pos, block_2_pos))
         
-        if self.door:
+        if self.door or self.drawer:
             goal_img = self.save_goal_img(None, goal_pos, 0, angle=angle)
         else:
             goal_img = self.save_goal_img(None, goal_pos, 0)
@@ -669,7 +758,7 @@ class Tabletop(SawyerXYZEnv):
         while repeat:
             for i in range(3):
                 self.targetobj = i
-                if self.door: 
+                if self.door or self.drawer: 
                     self.obj_init_pos = obs[(i+1)*3:((i+1)*3)+3]
                     self._set_obj_xyz(self.obj_init_pos)
                     object_qpos = self.sim.data.get_joint_qpos('objGeom{}_x'.format(i))
@@ -696,6 +785,10 @@ class Tabletop(SawyerXYZEnv):
             self.change_door_angle(obs[-1])
             door_vel = np.array([0.])
             self.sim.data.set_joint_qvel('doorjoint', door_vel)
+        elif self.drawer:
+            self.data.qpos[-1] = angle
+            door_vel = np.array([0.])
+            self.sim.data.set_joint_qvel('handle', door_vel)
         self._reset_hand(pos=obs[:3])
         imgs = []
         im = self.sim.render(64, 64, camera_name='cam0')
@@ -752,9 +845,29 @@ class Tabletop(SawyerXYZEnv):
                         init_pos = [-0.12, 0.6, 0.075]
                     if i == 2:
                         init_pos = [0.25, 0.4, 0.075]
+            elif self.drawer:
+                if i == 0:
+                    init_pos = [-0.15, 0.8, 0.075]
+                if i == 1:
+                    init_pos = [-0.12, 0.6, 0.075]
+                if i == 2:
+                    init_pos = [0.25, 0.4, 0.075]
+                if i == 3:
+                    init_pos = [-0.15, 0.4, 0.075]
+                if i == 4:
+                    init_pos = [0.2, 0.6, 0.075]
+                if i == 5:
+                    init_pos = [-0.2, 0.7, 0.075]
+                object_qvel = self.sim.data.get_joint_qvel('objGeom{}_x'.format(i))
+                object_qvel[:] = 0.
+                self.sim.data.set_joint_qvel('objGeom{}_x'.format(i), object_qvel)
             self.obj_init_pos = init_pos
             
-            self.sim.data.set_joint_qpos("objGeom{}_x".format(i), qpos)
+#             object_qpos = self.sim.data.get_joint_qpos('objGeom{}_x'.format(i))
+#             object_qpos[:3] = init_pos
+#             object_qpos[3:] = 0.
+            if self.door: 
+                self.sim.data.set_joint_qpos("objGeom{}_x".format(i), object_qpos)
             self._set_obj_xyz(self.obj_init_pos)
 
         imgs = []
@@ -788,6 +901,7 @@ class Tabletop(SawyerXYZEnv):
         #  Move blocks to correct positions
         for i in range(3):
             self.targetobj = i
+            init_pos = None
             if self.stack or self.door:
                 init_pos = goal[(i+1)*3:((i+1)*3)+3]
                 self.obj_init_pos = goal[(i+1)*3:((i+1)*3)+3]
@@ -797,7 +911,7 @@ class Tabletop(SawyerXYZEnv):
                 
             self._set_obj_xyz(self.obj_init_pos)
 
-            if self.door:
+            if self.door or self.drawer:
                 object_qpos = self.sim.data.get_joint_qpos('objGeom{}_x'.format(i))
                 object_qpos[:3] = init_pos
                 object_qpos[3:] = 0.

@@ -309,7 +309,7 @@ class Tabletop(SawyerXYZEnv):
         if self.door:
             start_id = 9 + self.targetobj*7
         elif self.drawer:
-            start_id = 18 + self.targetobj*7
+            start_id = 9 + self.targetobj*7
         else:
             start_id = 9 + self.targetobj*3
         if len(pos) < 3:
@@ -711,6 +711,7 @@ class Tabletop(SawyerXYZEnv):
             gripper_pos += np.random.uniform(-0.02, 0.02, (3,))
             gripper_pos[1] += 0.6 # need to adjust for middle of the table for the gripper being (0.0, 0.6)
             gripper_pos[2] = np.random.uniform(0.0, 0.20)
+            goal_pos = np.concatenate((gripper_pos, block_0_pos, block_1_pos, block_2_pos))
         elif block == 2:
             block_1_pos = [0.0, 0.15, 0] + np.random.uniform(-0.02, 0.02, (3,)) # pink block
             block_0_pos = [-0.1, 0.15, 0] + np.random.uniform(-0.02, 0.02, (3,)) # green block
@@ -735,8 +736,7 @@ class Tabletop(SawyerXYZEnv):
             gripper_pos += np.random.uniform(-0.02, 0.02, (3,))
             gripper_pos[1] += 0.6
             gripper_pos[2] = np.random.uniform(0.0, 0.20)
-        
-        goal_pos = np.concatenate((gripper_pos, block_0_pos, block_1_pos, block_2_pos))
+            goal_pos = np.concatenate((gripper_pos, block_0_pos, block_1_pos, block_2_pos))
         
         if self.door or self.drawer:
             goal_img = self.save_goal_img(None, goal_pos, 0, angle=angle)
@@ -756,7 +756,9 @@ class Tabletop(SawyerXYZEnv):
         _iters = 0
         self.reset()
         while repeat:
-            for i in range(3):
+            for i in range(6):
+                if not self.drawer and i > 2:
+                    break
                 self.targetobj = i
                 if self.door or self.drawer: 
                     self.obj_init_pos = obs[(i+1)*3:((i+1)*3)+3]
@@ -785,10 +787,10 @@ class Tabletop(SawyerXYZEnv):
             self.change_door_angle(obs[-1])
             door_vel = np.array([0.])
             self.sim.data.set_joint_qvel('doorjoint', door_vel)
-        elif self.drawer:
-            self.data.qpos[-1] = angle
-            door_vel = np.array([0.])
-            self.sim.data.set_joint_qvel('handle', door_vel)
+#         elif self.drawer:
+#             self.data.qpos[-1] = angle
+#             door_vel = np.array([0.])
+#             self.sim.data.set_joint_qvel('handle', door_vel)
         self._reset_hand(pos=obs[:3])
         imgs = []
         im = self.sim.render(64, 64, camera_name='cam0')
@@ -899,14 +901,17 @@ class Tabletop(SawyerXYZEnv):
         self.pickCompleted = False
 
         #  Move blocks to correct positions
-        for i in range(3):
+        for i in range(6):
+            if not self.drawer and i >= 3:
+                break
             self.targetobj = i
             init_pos = None
-            if self.stack or self.door:
+            if self.stack or self.door or self.drawer:
                 init_pos = goal[(i+1)*3:((i+1)*3)+3]
                 self.obj_init_pos = goal[(i+1)*3:((i+1)*3)+3]
             else:
                 self.obj_init_pos = goal[(i+1)*3:((i+1)*3)+2]
+            print("init pos", self.obj_init_pos)
             self.obj_init_pos[:2] += np.random.normal(loc=0, scale=0.001, size=2)
                 
             self._set_obj_xyz(self.obj_init_pos)

@@ -441,17 +441,17 @@ class Tabletop(SawyerXYZEnv):
                     self.sim.data.set_joint_qvel('objGeom{}_x'.format(i), object_qvel)
                 elif self.drawer:
                     if i == 0:
-                        init_pos = [0.4, 0.3, 0]
+                        init_pos = [-0.15, 0.8, 0.075]
                     if i == 1:
-                        init_pos = [-0.12, 0.6, 0]
+                        init_pos = [-0.12, 0.6, 0.075]
                     if i == 2:
-                        init_pos = [0.4, 0.5, 0]
+                        init_pos = [0.25, 0.4, 0.075]
                     if i == 3:
-                        init_pos = [-0.15, 0.4, 0]
+                        init_pos = [-0.15, 0.4, 0.075]
                     if i == 4:
-                        init_pos = [0.5, 0.4, 0]
+                        init_pos = [0.2, 0.6, 0.075]
                     if i == 5:
-                        init_pos = [-0.2, 0.7, 0]
+                        init_pos = [-0.2, 0.7, 0.075]
                     object_qvel = self.sim.data.get_joint_qvel('objGeom{}_x'.format(i))
                     object_qvel[:] = 0.
                     self.sim.data.set_joint_qvel('objGeom{}_x'.format(i), object_qvel)
@@ -635,22 +635,15 @@ class Tabletop(SawyerXYZEnv):
             goal_pos = np.concatenate([gripper_pos, block_0_pos, block_1_pos, block_2_pos])
             
         elif self.drawer:
-            angle = np.random.uniform(0.1, 0.3)
-            angle = -angle
+            angle = np.random.uniform(0.0872665, 0.785398)
             if fixed_angle is not None:
                 angle = fixed_angle
-            block_0_pos  = [0.4, 0.3, 0.0]
-            block_1_pos = [-0.12, 0.6, 0]
-            block_2_pos = [0.4, 0.5, 0]
-            block_3_pos = [-0.15, 0.4, 0]
-            block_4_pos = [0.5, 0.4, 0]
-            block_5_pos = [-0.2, 0.7, 0]
-            # block_0_pos = [-0.15, 0.8, 0.075]
-            # block_1_pos = [-0.12, 0.6, 0.075]
-            # block_2_pos = [0.25, 0.4, 0.075]
-            # block_3_pos = [-0.15, 0.4, 0.075]
-            # block_4_pos = [0.2, 0.6, 0.075]
-            # block_5_pos = [-0.2, 0.7, 0.075]
+            block_0_pos = [-0.15, 0.8, 0.075]
+            block_1_pos = [-0.12, 0.6, 0.075]
+            block_2_pos = [0.25, 0.4, 0.075]
+            block_3_pos = [-0.15, 0.4, 0.075]
+            block_4_pos = [0.2, 0.6, 0.075]
+            block_5_pos = [-0.2, 0.7, 0.075]
             gripper_pos = self.sim.data.get_geom_xpos('handle')
             goal_pos = np.concatenate([gripper_pos, block_0_pos, block_1_pos, block_2_pos, block_3_pos, block_4_pos, block_5_pos])
             
@@ -854,18 +847,18 @@ class Tabletop(SawyerXYZEnv):
                     if i == 2:
                         init_pos = [0.25, 0.4, 0.075]
             elif self.drawer:
-                if i == 0: # teal
-                    init_pos = [0.4, 0.3, 0]
+                if i == 0:
+                    init_pos = [-0.15, 0.8, 0.075]
                 if i == 1:
-                    init_pos = [-0.12, 0.6, 0]
+                    init_pos = [-0.12, 0.6, 0.075]
                 if i == 2:
-                    init_pos = [0.4, 0.5, 0]
+                    init_pos = [0.25, 0.4, 0.075]
                 if i == 3:
-                    init_pos = [-0.15, 0.4, 0]
-                if i == 4: # olive
-                    init_pos = [0.5, 0.4, 0]
+                    init_pos = [-0.15, 0.4, 0.075]
+                if i == 4:
+                    init_pos = [0.2, 0.6, 0.075]
                 if i == 5:
-                    init_pos = [-0.2, 0.7, 0]
+                    init_pos = [-0.2, 0.7, 0.075]
                 object_qvel = self.sim.data.get_joint_qvel('objGeom{}_x'.format(i))
                 object_qvel[:] = 0.
                 self.sim.data.set_joint_qvel('objGeom{}_x'.format(i), object_qvel)

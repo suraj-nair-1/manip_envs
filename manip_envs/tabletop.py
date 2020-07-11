@@ -635,7 +635,7 @@ class Tabletop(SawyerXYZEnv):
             goal_pos = np.concatenate([gripper_pos, block_0_pos, block_1_pos, block_2_pos])
             
         elif self.drawer:
-            angle = np.random.uniform(0.1, 0.3)
+            angle = np.random.uniform(0.0, 0.01)
             angle = -angle
             if fixed_angle is not None:
                 angle = fixed_angle
@@ -651,7 +651,8 @@ class Tabletop(SawyerXYZEnv):
             # block_3_pos = [-0.15, 0.4, 0.075]
             # block_4_pos = [0.2, 0.6, 0.075]
             # block_5_pos = [-0.2, 0.7, 0.075]
-            gripper_pos = self.sim.data.get_geom_xpos('handle')
+            gripper_pos = self.data.get_site_xpos('handleStart')
+#             gripper_pos = self.sim.data.get_geom_xpos('handle')
             goal_pos = np.concatenate([gripper_pos, block_0_pos, block_1_pos, block_2_pos, block_3_pos, block_4_pos, block_5_pos])
             
         elif self.stack:
@@ -897,7 +898,14 @@ class Tabletop(SawyerXYZEnv):
     def save_goal_img(self, PATH, goal, eps, step_thru=False, actions=None, angle=None):
         '''Returns image with a given goal array of positions for the gripper and blocks.'''
         # Move end effector to green block by simulation
+        if angle is not None:
+            print("angle", angle)
+            self.change_door_angle(angle)
+        if self.drawer:
+            print(self.data.get_site_xpos('handleStart'))
+            goal[:3] = self.data.get_site_xpos('handleStart')
         pos = goal[:3]
+        print("init pos", pos)
         for _ in range(100):
             self.data.set_mocap_pos('mocap', pos)
             self.data.set_mocap_quat('mocap', np.array([1, 0, 1, 0]))
@@ -917,7 +925,6 @@ class Tabletop(SawyerXYZEnv):
                 self.obj_init_pos = goal[(i+1)*3:((i+1)*3)+3]
             else:
                 self.obj_init_pos = goal[(i+1)*3:((i+1)*3)+2]
-            print("init pos", self.obj_init_pos)
             self.obj_init_pos[:2] += np.random.normal(loc=0, scale=0.001, size=2)
                 
             self._set_obj_xyz(self.obj_init_pos)

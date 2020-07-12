@@ -635,7 +635,7 @@ class Tabletop(SawyerXYZEnv):
             goal_pos = np.concatenate([gripper_pos, block_0_pos, block_1_pos, block_2_pos])
             
         elif self.drawer:
-            angle = np.random.uniform(0.0, 0.01)
+            angle = np.random.uniform(0.0, 0.2)
             angle = -angle
             if fixed_angle is not None:
                 angle = fixed_angle

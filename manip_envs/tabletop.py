@@ -441,17 +441,17 @@ class Tabletop(SawyerXYZEnv):
                     self.sim.data.set_joint_qvel('objGeom{}_x'.format(i), object_qvel)
                 elif self.drawer:
                     if i == 0:
-                        init_pos = [0.4, 0.3, 0]
+                        init_pos = [0.4, 0.3, 0.05]
                     if i == 1:
-                        init_pos = [-0.12, 0.6, 0]
+                        init_pos = [-0.12, 0.6, 0.15]
                     if i == 2:
-                        init_pos = [0.4, 0.5, 0]
+                        init_pos = [0.4, 0.5, 0.15]
                     if i == 3:
-                        init_pos = [-0.15, 0.4, 0]
+                        init_pos = [-0.15, 0.4, 0.05]
                     if i == 4:
-                        init_pos = [0.5, 0.4, 0]
+                        init_pos = [0.5, 0.4, 0.05]
                     if i == 5:
-                        init_pos = [-0.2, 0.7, 0]
+                        init_pos = [-0.2, 0.7, 0.05]
                     object_qvel = self.sim.data.get_joint_qvel('objGeom{}_x'.format(i))
                     object_qvel[:] = 0.
                     self.sim.data.set_joint_qvel('objGeom{}_x'.format(i), object_qvel)
@@ -469,7 +469,7 @@ class Tabletop(SawyerXYZEnv):
         if self.door or self.double_target:
             self.change_door_angle(0.0)
         elif self.drawer:
-            self.data.qpos[-1] = 0.0
+            self.data.qpos[-1] = -0.05
         self.sim.forward()
         
         o = self.get_obs()
@@ -635,7 +635,7 @@ class Tabletop(SawyerXYZEnv):
             goal_pos = np.concatenate([gripper_pos, block_0_pos, block_1_pos, block_2_pos])
             
         elif self.drawer:
-            angle = np.random.uniform(0.0, 0.2)
+            angle = np.random.uniform(0.05, 0.15)
             angle = -angle
             if fixed_angle is not None:
                 angle = fixed_angle
@@ -856,17 +856,17 @@ class Tabletop(SawyerXYZEnv):
                         init_pos = [0.25, 0.4, 0.075]
             elif self.drawer:
                 if i == 0: # teal
-                    init_pos = [0.4, 0.3, 0]
+                    init_pos = [0.4, 0.3, 0.05]
                 if i == 1:
-                    init_pos = [-0.12, 0.6, 0]
+                    init_pos = [-0.12, 0.6, 0.05]
                 if i == 2:
-                    init_pos = [0.4, 0.5, 0]
+                    init_pos = [0.4, 0.5, 0.05]
                 if i == 3:
-                    init_pos = [-0.15, 0.4, 0]
+                    init_pos = [-0.15, 0.4, 0.05]
                 if i == 4: # olive
-                    init_pos = [0.5, 0.4, 0]
+                    init_pos = [0.5, 0.4, 0.05]
                 if i == 5:
-                    init_pos = [-0.2, 0.7, 0]
+                    init_pos = [-0.2, 0.7, 0.05]
                 object_qvel = self.sim.data.get_joint_qvel('objGeom{}_x'.format(i))
                 object_qvel[:] = 0.
                 self.sim.data.set_joint_qvel('objGeom{}_x'.format(i), object_qvel)

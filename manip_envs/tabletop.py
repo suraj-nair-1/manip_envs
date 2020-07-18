@@ -902,10 +902,10 @@ class Tabletop(SawyerXYZEnv):
             print("angle", angle)
             self.change_door_angle(angle)
         if self.drawer:
-            print(self.data.get_site_xpos('handleStart'))
+#             print(self.data.get_site_xpos('handleStart'))
             goal[:3] = self.data.get_site_xpos('handleStart')
         pos = goal[:3]
-        print("init pos", pos)
+#         print("init pos", pos)
         for _ in range(100):
             self.data.set_mocap_pos('mocap', pos)
             self.data.set_mocap_quat('mocap', np.array([1, 0, 1, 0]))

@@ -7,7 +7,7 @@
     <worldbody>
         <include file="sawyer_xyz_base_no_table.xml"></include>
 
-        <camera mode="fixed" name="cam0" pos="0.75 0.15 0.65" quat="0.3858 -0.1932 0.4379 -0.7886"/> 
+        <camera mode="fixed" name="cam0" pos="0.8 0.1 0.6" quat="0.3858 -0.1932 0.4379 -0.7886"/> 
         
         <body childclass="block_base" name="obj0" pos="0 0.4 0">
             <joint name="objGeom0_x" type="free" limited="false" damping="0.01"></joint>

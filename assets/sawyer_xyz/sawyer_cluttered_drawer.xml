@@ -7,57 +7,58 @@
     <worldbody>
         <include file="sawyer_xyz_base_no_table.xml"></include>
 
-        <camera mode="fixed" name="cam0" pos="0.8 0.1 0.6" quat="0.3858 -0.1932 0.4379 -0.7886"/> 
+        <camera mode="fixed" name="cam0" pos="0.70 0.2 0.55" quat="0.3858 -0.1932 0.4379 -0.7886"/> 
+
         
         <body childclass="block_base" name="obj0" pos="0 0.4 0">
             <joint name="objGeom0_x" type="free" limited="false" damping="0.01"></joint>
           <geom rgba="0.0 0.5 0.5 1" pos="0 0 .02" mesh="block"/>
-          <geom name="objGeom0" class="block_col" pos="0 0 .02" size="0.05 0.05 0.05" type="box" mass=".1"
+          <geom name="objGeom0" class="block_col" pos="0 0 .05" size="0.05 0.05 0.05" type="box" mass=".1"
         solimp="0.99 0.99 0.01" solref="0.01 1"/>
-            <site name="obj0" pos="0 0 0" size="0.05 0.05 0.05" rgba="0.0 0.5 0.5 1" type="box"></site>
+            <site name="obj0" pos="0 0 0.05" size="0.05 0.05 0.05" rgba="0.0 0.5 0.5 1" type="box"></site>
         </body>
         
         <body childclass="block_base" name="obj1" pos="0 0.4 0">
             <joint name="objGeom1_x" type="free" limited="false" damping="0.01"></joint>
           <geom rgba="1 .5 1 1" pos="0 0 .02" mesh="block"/>
-          <geom name="objGeom1" class="block_col" pos="0 0 .02" size="0.10 0.10 0.10" type="box" mass=".1"
+          <geom name="objGeom1" class="block_col" pos="0 0 .05" size="0.05 0.05 0.05" type="box" mass=".1"
         solimp="0.99 0.99 0.01" solref="0.01 1"/>
-            <site name="obj1" pos="0 0 0" size="0.05 0.05 0.05" rgba="1 .5 1 1" type="box"></site>
+            <site name="obj1" pos="0 0 0.05" size="0.05 0.05 0.05" rgba="1 .5 1 1" type="box"></site>
         </body>
         
         <body childclass="block_base" name="obj2" pos="0 0.4 0">
             <joint name="objGeom2_x" type="free" limited="false" damping="0.01"></joint>
           <geom rgba="0 0.0 1 1" pos="0 0 .02" mesh="block"/>
-          <geom name="objGeom2" class="block_col" pos="0 0 .02" size="0.05 0.05 0.05" type="box" mass=".1"
+          <geom name="objGeom2" class="block_col" pos="0 0 .05" size="0.04 0.04 0.04" type="box" mass=".1"
         solimp="0.99 0.99 0.01" solref="0.01 1"/>
-            <site name="obj2" pos="0 0 0" size="0.05 0.05 0.05" rgba="0 0.0 1 1" type="box"></site>
+            <site name="obj2" pos="0 0 0.05" size="0.04 0.04 0.04" rgba="0 0.0 1 1" type="box"></site>
         </body>
         
         <body childclass="block_base" name="obj3" pos="0 0.4 0">
             <joint name="objGeom3_x" type="free" limited="false" damping="0.01"></joint>
           <geom rgba="1. 1. 0 1" pos="0 0 .02" mesh="block"/>
-          <geom name="objGeom3"class="block_col" pos="0 0 .02" size="0.05 0.05 0.05" type="box" mass=".1"
+          <geom name="objGeom3"class="block_col" pos="0 0 .05" size="0.05 0.05 0.05" type="box" mass=".1"
         solimp="0.99 0.99 0.01" solref="0.01 1"/>
-            <site name="obj3" pos="0 0 0" size="0.05 0.05 0.05" rgba="1. 1. 0 1" type="box"></site>
+            <site name="obj3" pos="0 0 0.05" size="0.05 0.05 0.05" rgba="1. 1. 0 1" type="box"></site>
         </body>
         
         <body childclass="block_base" name="obj4" pos="0 0.4 0">
             <joint name="objGeom4_x" type="free" limited="false" damping="0.01"></joint>
           <geom rgba="0.5 0.5 0. 1" pos="0 0 .02" mesh="block"/>
-          <geom name="objGeom4" class="block_col" pos="0 0 .02" size="0.05 0.05 0.05" type="box" mass=".1"
+          <geom name="objGeom4" class="block_col" pos="0 0 .05" size="0.05 0.05 0.05" type="box" mass=".1"
         solimp="0.99 0.99 0.01" solref="0.01 1"/>
-            <site name="obj4" pos="0 0 0" size="0.05 0.05 0.05" rgba="0.5 0.5 0. 1" type="box"></site>
+            <site name="obj4" pos="0 0 0.05" size="0.05 0.05 0.05" rgba="0.5 0.5 0. 1" type="box"></site>
         </body>
         
         <body childclass="block_base" name="obj5" pos="0 0.4 0">
             <joint name="objGeom5_x" type="free" limited="false" damping="0.01"></joint>
           <geom rgba="1 0 0 1" pos="0 0 .02" mesh="block"/>
-          <geom name="objGeom5" class="block_col" pos="0 0 .02" size="0.05 0.05 0.05" type="box" mass=".1"
+          <geom name="objGeom5" class="block_col" pos="0 0 .05" size="0.05 0.05 0.05" type="box" mass=".1"
         solimp="0.99 0.99 0.01" solref="0.01 1"/>
-            <site name="obj5" pos="0 0 0" size="0.05 0.05 0.05" rgba="1 0 0 1" type="box"></site>
+            <site name="obj5" pos="0 0 0.05" size="0.05 0.05 0.05" rgba="1 0 0 1" type="box"></site>
         </body>
         
-        <body name="drawer" pos="0.3 0.9 0">
+        <body name="drawer" pos="0.3 0.8 0">
             <include file="drawer.xml"/>
 
         </body>

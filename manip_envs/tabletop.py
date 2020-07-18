@@ -486,17 +486,17 @@ class Tabletop(SawyerXYZEnv):
                 
                 elif self.drawer:
                     if i == 0:
-                        init_pos = [0.4, 0.3, 0.05]
+                        init_pos = [0.4, 0.3, 0.005]
                     if i == 1:
-                        init_pos = [-0.12, 0.6, 0.05]
+                        init_pos = [-0.12, 0.6, 0.005]
                     if i == 2:
-                        init_pos = [0.4, 0.5, 0.05]
+                        init_pos = [0.4, 0.5, 0.005]
                     if i == 3:
-                        init_pos = [-0.15, 0.4, 0.05]
+                        init_pos = [-0.15, 0.4, 0.005]
                     if i == 4:
-                        init_pos = [0.5, 0.4, 0.05]
+                        init_pos = [0.5, 0.4, 0.005]
                     if i == 5:
-                        init_pos = [-0.2, 0.7, 0.05]
+                        init_pos = [-0.2, 0.7, 0.005]
                     object_qvel = self.sim.data.get_joint_qvel('objGeom{}_x'.format(i))
                     object_qvel[:] = 0.
                     self.sim.data.set_joint_qvel('objGeom{}_x'.format(i), object_qvel)
@@ -514,7 +514,7 @@ class Tabletop(SawyerXYZEnv):
         if self.door or self.new_door or self.double_target:
             self.change_door_angle(0.0)
         elif self.drawer:
-            self.data.qpos[-1] = 0.0
+            self.data.qpos[-1] = -0.05
         self.sim.forward()
         
         o = self.get_obs()
@@ -947,17 +947,17 @@ class Tabletop(SawyerXYZEnv):
                     init_pos = [0.15, 0.6, 0.075]
             elif self.drawer:
                 if i == 0: # teal
-                    init_pos = [0.4, 0.3, 0.05]
+                    init_pos = [0.4, 0.3, 0.005]
                 if i == 1:
-                    init_pos = [-0.12, 0.6, 0.05]
+                    init_pos = [-0.12, 0.6, 0.005]
                 if i == 2:
-                    init_pos = [0.4, 0.5, 0.05]
+                    init_pos = [0.4, 0.5, 0.005]
                 if i == 3:
-                    init_pos = [-0.15, 0.4, 0.05]
+                    init_pos = [-0.15, 0.4, 0.005]
                 if i == 4: # olive
-                    init_pos = [0.5, 0.4, 0.05]
+                    init_pos = [0.5, 0.4, 0.005]
                 if i == 5:
-                    init_pos = [-0.2, 0.7, 0.05]
+                    init_pos = [-0.2, 0.7, 0.005]
                 object_qvel = self.sim.data.get_joint_qvel('objGeom{}_x'.format(i))
                 object_qvel[:] = 0.
                 self.sim.data.set_joint_qvel('objGeom{}_x'.format(i), object_qvel)
@@ -1014,12 +1014,11 @@ class Tabletop(SawyerXYZEnv):
         #    print("angle", angle)
         #    self.change_door_angle(angle)
         if self.drawer:
-            print(self.data.get_site_xpos('handleStart'))
+#             print(self.data.get_site_xpos('handleStart'))
             goal[:3] = self.data.get_site_xpos('handleStart')
         pos = goal[:3]
-        print("init pos", pos)
-        # self._reset_hand()
-        for step in range(100):
+#         print("init pos", pos)
+        for _ in range(100):
             self.data.set_mocap_pos('mocap', pos)
             self.data.set_mocap_quat('mocap', np.array([1, 0, 1, 0]))
             self.do_simulation([-1,1], self.frame_skip)
@@ -1044,7 +1043,7 @@ class Tabletop(SawyerXYZEnv):
             self.obj_init_pos[:2] += np.random.normal(loc=0, scale=0.001, size=2)
                 
             self._set_obj_xyz(self.obj_init_pos)
-            print('Set block pos {}'.format(i))
+          
             if self.door or self.new_door or self.drawer:
                 object_qpos = self.sim.data.get_joint_qpos('objGeom{}_x'.format(i))
                 object_qpos[:3] = init_pos
@@ -1054,11 +1053,10 @@ class Tabletop(SawyerXYZEnv):
                 object_qvel[:] = 0.
                 self.sim.data.set_joint_qvel('objGeom{}_x'.format(i), object_qvel)
             self.sim.forward()
-            print('Finished saving')
+        
         # if step_thru: 
             # only step thru actions if the flag is set to True & actions is not None
         if angle is not None:
-            print('Change door angle to {}'.format(angle))
             self.change_door_angle(angle)
         im = self.sim.render(64, 64, camera_name='cam0') #cam0')
         return im

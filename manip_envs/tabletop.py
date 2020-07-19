@@ -693,7 +693,7 @@ class Tabletop(SawyerXYZEnv):
                 angle = np.random.uniform(-0.785398, 0.785398)
             if fixed_angle is not None:
                 angle = fixed_angle
-            block_0_pos = [-0.2, 0.7, 0.075]
+            block_0_pos = [-0.15, 0.8, 0.075]
             block_3_pos = [0.25, 0.6, 0.075]
             block_4_pos = [0.15, 0.6, 0.075]
             block_1_pos = [-0.12, 0.6, 0.075]

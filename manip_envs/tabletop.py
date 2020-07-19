@@ -486,15 +486,15 @@ class Tabletop(SawyerXYZEnv):
                 
                 elif self.drawer:
                     if i == 0:
-                        init_pos = [0.4, 0.3, 0.005]
+                        init_pos = [0.35, 0.3, 0.005]
                     if i == 1:
                         init_pos = [-0.12, 0.6, 0.005]
                     if i == 2:
-                        init_pos = [0.4, 0.5, 0.005]
+                        init_pos = [0.2, 0.3, 0.005]
                     if i == 3:
                         init_pos = [-0.15, 0.4, 0.005]
                     if i == 4:
-                        init_pos = [0.5, 0.4, 0.005]
+                        init_pos = [0.45, 0.6, 0.005]
                     if i == 5:
                         init_pos = [-0.2, 0.7, 0.005]
                     object_qvel = self.sim.data.get_joint_qvel('objGeom{}_x'.format(i))
@@ -705,16 +705,16 @@ class Tabletop(SawyerXYZEnv):
             
         elif self.drawer:
             # slightly increased the goal range from (0, 0.2) to below
-            angle = np.random.uniform(0.08, 0.2)
+            angle = np.random.uniform(0.05, 0.14)
             angle = -angle
             if fixed_angle is not None:
                 angle = fixed_angle
-            block_0_pos  = [0.4, 0.3, 0.05]
-            block_1_pos = [-0.12, 0.6, 0.05]
-            block_2_pos = [0.4, 0.5, 0.05]
-            block_3_pos = [-0.15, 0.4, 0.05]
-            block_4_pos = [0.5, 0.4, 0.05]
-            block_5_pos = [-0.2, 0.7, 0.05]
+            block_0_pos = [0.35, 0.3, 0.005]
+            block_1_pos = [-0.12, 0.6, 0.005]
+            block_2_pos = [0.2, 0.3, 0.005]
+            block_3_pos = [-0.15, 0.4, 0.005]
+            block_4_pos = [0.45, 0.6, 0.005]
+            block_5_pos = [-0.2, 0.7, 0.005]
             # block_0_pos = [-0.15, 0.8, 0.075]
             # block_1_pos = [-0.12, 0.6, 0.075]
             # block_2_pos = [0.25, 0.4, 0.075]
@@ -948,16 +948,16 @@ class Tabletop(SawyerXYZEnv):
                 if i == 4:
                     init_pos = [0.15, 0.6, 0.075]
             elif self.drawer:
-                if i == 0: # teal
-                    init_pos = [0.4, 0.3, 0.005]
+                if i == 0:
+                    init_pos = [0.35, 0.3, 0.005]
                 if i == 1:
                     init_pos = [-0.12, 0.6, 0.005]
                 if i == 2:
-                    init_pos = [0.4, 0.5, 0.005]
+                    init_pos = [0.2, 0.3, 0.005]
                 if i == 3:
                     init_pos = [-0.15, 0.4, 0.005]
-                if i == 4: # olive
-                    init_pos = [0.5, 0.4, 0.005]
+                if i == 4:
+                    init_pos = [0.45, 0.6, 0.005]
                 if i == 5:
                     init_pos = [-0.2, 0.7, 0.005]
                 object_qvel = self.sim.data.get_joint_qvel('objGeom{}_x'.format(i))

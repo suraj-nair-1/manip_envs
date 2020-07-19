@@ -687,6 +687,7 @@ class Tabletop(SawyerXYZEnv):
                 gripper_pos = block_1_pos.copy()
                 gripper_pos[:2] += np.random.uniform(-0.02, 0.02, (2,))
                 gripper_pos[-1] += np.random.uniform(-0.01, 0.01, (1,))
+            self.change_door_angle(angle)
             goal_pos = np.concatenate([gripper_pos, block_0_pos, block_1_pos, block_2_pos])
         elif self.new_door:
             while abs(angle) < 0.0872665:# larger than 5 degrees angle
@@ -700,6 +701,7 @@ class Tabletop(SawyerXYZEnv):
             block_2_pos = [0.25, 0.4, 0.075]
             gripper_pos = self.sim.data.get_geom_xpos('handle')
             goal_pos = np.concatenate([gripper_pos, block_0_pos, block_1_pos, block_2_pos, block_3_pos, block_4_pos])
+            self.change_door_angle(angle)
             
         elif self.drawer:
             # slightly increased the goal range from (0, 0.2) to below

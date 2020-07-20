@@ -141,6 +141,7 @@ class Tabletop(SawyerXYZEnv):
                 os.makedirs(self.filepath)
         self.log_freq = log_freq
         self.epcount = 0 # num episodes so far (start from 1 for logging simplicity)
+        self.good_qpos = None #self.data.qpos[:7]
         self.hand_memory = []
         self.obj_memory0 = []
         self.obj_memory1 = []
@@ -607,6 +608,9 @@ class Tabletop(SawyerXYZEnv):
                     'dist': - self.compute_reward()}
 
     def _reset_hand(self, pos=None):
+        if self.epcount < 10 and self.cur_path_length == 0:
+            self.good_qpos = self.sim.data.qpos[:7].copy()
+        self.data.qpos[:7] = self.good_qpos
         if pos is None:
             pos = self.hand_init_pos.copy()
         for _ in range(100):

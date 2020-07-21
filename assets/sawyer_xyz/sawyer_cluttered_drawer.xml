@@ -7,7 +7,7 @@
     <worldbody>
         <include file="sawyer_xyz_base_no_table.xml"></include>
 
-        <camera mode="fixed" name="cam0" pos="0.70 0.2 0.55" quat="0.3858 -0.1932 0.4379 -0.7886"/> 
+        <camera mode="fixed" name="cam0" pos="0.78 0.12 0.75" quat="0.3858 -0.23 0.4379 -0.7886"/> 
 
         
         <body childclass="block_base" name="obj0" pos="0 0.4 0">
@@ -45,7 +45,7 @@
         <body childclass="block_base" name="obj4" pos="0 0.4 0">
             <joint name="objGeom4_x" type="free" limited="false" damping="0.01"></joint>
           <geom rgba="0.5 0.5 0. 1" pos="0 0 .02" mesh="block"/>
-          <geom name="objGeom4" class="block_col" pos="0 0 .05" size="0.05 0.05 0.05" type="box" mass=".1"
+          <geom name="objGeom4" class="block_col" pos="0 0 .05" size="0.04 0.04 0.04" type="box" mass=".1"
         solimp="0.99 0.99 0.01" solref="0.01 1"/>
             <site name="obj4" pos="0 0 0.05" size="0.05 0.05 0.05" rgba="0.5 0.5 0. 1" type="box"></site>
         </body>
@@ -53,12 +53,12 @@
         <body childclass="block_base" name="obj5" pos="0 0.4 0">
             <joint name="objGeom5_x" type="free" limited="false" damping="0.01"></joint>
           <geom rgba="1 0 0 1" pos="0 0 .02" mesh="block"/>
-          <geom name="objGeom5" class="block_col" pos="0 0 .05" size="0.05 0.05 0.05" type="box" mass=".1"
+          <geom name="objGeom5" class="block_col" pos="0 0 .05" size="0.04 0.04 0.04" type="box" mass=".1"
         solimp="0.99 0.99 0.01" solref="0.01 1"/>
             <site name="obj5" pos="0 0 0.05" size="0.05 0.05 0.05" rgba="1 0 0 1" type="box"></site>
         </body>
         
-        <body name="drawer" pos="0.3 0.8 0">
+        <body name="drawer" pos="0.15 0.8 0">
             <include file="drawer.xml"/>
 
         </body>

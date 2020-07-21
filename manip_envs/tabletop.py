@@ -221,60 +221,60 @@ class Tabletop(SawyerXYZEnv):
                 self.block2_interaction.append(dist2)
         self.cur_path_length +=1
         if self.door:
-            return ob, reward, done, {'green_x': self.data.get_site_xpos('obj0')[0], 
-                                      'green_y': self.data.get_site_xpos('obj0')[1], 
-                                      'green_z': self.data.get_site_xpos('obj0')[2], 
-                                      'pink_x': self.data.get_site_xpos('obj1')[0], 
-                                      'pink_y': self.data.get_site_xpos('obj1')[1], 
-                                      'pink_z': self.data.get_site_xpos('obj1')[2], 
-                                      'blue_x': self.data.get_site_xpos('obj2')[0], 
-                                      'blue_y': self.data.get_site_xpos('obj2')[1], 
-                                      'blue_z': self.data.get_site_xpos('obj2')[2], 
+            return ob, reward, done, {'green_x': self.data.qpos[9], 
+                                      'green_y': self.data.qpos[10], 
+                                      'green_z': self.data.qpos[11], 
+                                      'pink_x': self.data.qpos[12], 
+                                      'pink_y': self.data.qpos[13], 
+                                      'pink_z': self.data.qpos[14], 
+                                      'blue_x': self.data.qpos[15], 
+                                      'blue_y': self.data.qpos[16], 
+                                      'blue_z': self.data.qpos[17], 
                                       'door_joint': self.data.qpos[-1],
                                       'hand_x': self.get_endeff_pos()[0],
                                       'hand_y': self.get_endeff_pos()[1],
                                       'hand_z': self.get_endeff_pos()[2],
                                       'dist': - self.compute_reward()}
         if self.new_door:
-            return ob, reward, done, {'green_x': self.data.get_site_xpos('obj0')[0], 
-                                      'green_y': self.data.get_site_xpos('obj0')[1], 
-                                      'green_z': self.data.get_site_xpos('obj0')[2], 
-                                      'pink_x': self.data.get_site_xpos('obj1')[0], 
-                                      'pink_y': self.data.get_site_xpos('obj1')[1], 
-                                      'pink_z': self.data.get_site_xpos('obj1')[2], 
-                                      'blue_x': self.data.get_site_xpos('obj2')[0], 
-                                      'blue_y': self.data.get_site_xpos('obj2')[1], 
-                                      'blue_z': self.data.get_site_xpos('obj2')[2], 
+            return ob, reward, done, {'green_x': self.data.qpos[9], 
+                                      'green_y': self.data.qpos[10], 
+                                      'green_z': self.data.qpos[11], 
+                                      'pink_x': self.data.qpos[12], 
+                                      'pink_y': self.data.qpos[13], 
+                                      'pink_z': self.data.qpos[14], 
+                                      'blue_x': self.data.qpos[15], 
+                                      'blue_y': self.data.qpos[16], 
+                                      'blue_z': self.data.qpos[17], 
                                       'door_joint': self.data.qpos[-1],
                                       'hand_x': self.get_endeff_pos()[0],
                                       'hand_y': self.get_endeff_pos()[1],
                                       'hand_z': self.get_endeff_pos()[2],
-                                      '3_x': self.data.get_site_xpos('obj3')[0],
-                                      '3_y': self.data.get_site_xpos('obj3')[1],
-                                      '3_z': self.data.get_site_xpos('obj3')[2],
-                                      '4_x': self.data.get_site_xpos('obj4')[0],
-                                      '4_y' : self.data.get_site_xpos('obj4')[1],
-                                      '4_z': self.data.get_site_xpos('obj4')[2], 
+                                      '3_x': self.data.qpos[18],
+                                      '3_y': self.data.qpos[19],
+                                      '3_z': self.data.qpos[20],
+                                      '4_x': self.data.qpos[21],
+                                      '4_y' : self.data.qpos[22],
+                                      '4_z': self.data.qpos[23], 
                                       'dist': - self.compute_reward()}
         elif self.drawer:
-            return ob, reward, done, {'block0_x': self.data.get_site_xpos('obj0')[0], 
-                                      'block0_y': self.data.get_site_xpos('obj0')[1], 
-                                      'block0_z': self.data.get_site_xpos('obj0')[2], 
-                                      'block1_x': self.data.get_site_xpos('obj1')[0], 
-                                      'block1_y': self.data.get_site_xpos('obj1')[1], 
-                                      'block1_z': self.data.get_site_xpos('obj1')[2], 
-                                      'block2_x': self.data.get_site_xpos('obj2')[0], 
-                                      'block2_y': self.data.get_site_xpos('obj2')[1], 
-                                      'block2_z': self.data.get_site_xpos('obj2')[2], 
-                                      'block3_x': self.data.get_site_xpos('obj3')[0], 
-                                      'block3_y': self.data.get_site_xpos('obj3')[1], 
-                                      'block3_z': self.data.get_site_xpos('obj3')[2], 
-                                      'block4_x': self.data.get_site_xpos('obj4')[0], 
-                                      'block4_y': self.data.get_site_xpos('obj4')[1], 
-                                      'block4_z': self.data.get_site_xpos('obj4')[2], 
-                                      'block5_x': self.data.get_site_xpos('obj5')[0], 
-                                      'block5_y': self.data.get_site_xpos('obj5')[1], 
-                                      'block5_z': self.data.get_site_xpos('obj5')[2], 
+            return ob, reward, done, {'block0_x': self.data.qpos[9], 
+                                      'block0_y': self.data.qpos[10], 
+                                      'block0_z': self.data.qpos[11], 
+                                      'block1_x': self.data.qpos[12], 
+                                      'block1_y': self.data.qpos[13], 
+                                      'block1_z': self.data.qpos[14], 
+                                      'block2_x': self.data.qpos[15], 
+                                      'block2_y': self.data.qpos[16], 
+                                      'block2_z': self.data.qpos[17], 
+                                      'block3_x': self.data.qpos[18], 
+                                      'block3_y': self.data.qpos[19], 
+                                      'block3_z': self.data.qpos[20], 
+                                      'block4_x': self.data.qpos[21], 
+                                      'block4_y': self.data.qpos[22], 
+                                      'block4_z': self.data.qpos[23], 
+                                      'block5_x': self.data.qpos[24], 
+                                      'block5_y': self.data.qpos[25], 
+                                      'block5_z': self.data.qpos[26], 
                                       'drawer': self.data.qpos[-1],
                                       'hand_x': self.get_endeff_pos()[0],
                                       'hand_y': self.get_endeff_pos()[1],
@@ -551,24 +551,24 @@ class Tabletop(SawyerXYZEnv):
             low_dim_info['door_joint'] = self.data.qpos[-1]
 
         elif self.drawer:
-            low_dim_info = {'block0_x': self.data.get_site_xpos('obj0')[0], 
-                                      'block0_y': self.data.get_site_xpos('obj0')[1], 
-                                      'block0_z': self.data.get_site_xpos('obj0')[2], 
-                                      'block1_x': self.data.get_site_xpos('obj1')[0], 
-                                      'block1_y': self.data.get_site_xpos('obj1')[1], 
-                                      'block1_z': self.data.get_site_xpos('obj1')[2], 
-                                      'block2_x': self.data.get_site_xpos('obj2')[0], 
-                                      'block2_y': self.data.get_site_xpos('obj2')[1], 
-                                      'block2_z': self.data.get_site_xpos('obj2')[2], 
-                                      'block3_x': self.data.get_site_xpos('obj3')[0], 
-                                      'block3_y': self.data.get_site_xpos('obj3')[1], 
-                                      'block3_z': self.data.get_site_xpos('obj3')[2], 
-                                      'block4_x': self.data.get_site_xpos('obj4')[0], 
-                                      'block4_y': self.data.get_site_xpos('obj4')[1], 
-                                      'block4_z': self.data.get_site_xpos('obj4')[2], 
-                                      'block5_x': self.data.get_site_xpos('obj5')[0], 
-                                      'block5_y': self.data.get_site_xpos('obj5')[1], 
-                                      'block5_z': self.data.get_site_xpos('obj5')[2], 
+            low_dim_info = {'block0_x': self.data.qpos[9], 
+                                      'block0_y': self.data.qpos[10], 
+                                      'block0_z': self.data.qpos[11], 
+                                      'block1_x': self.data.qpos[12], 
+                                      'block1_y': self.data.qpos[13], 
+                                      'block1_z': self.data.qpos[14], 
+                                      'block2_x': self.data.qpos[15], 
+                                      'block2_y': self.data.qpos[16], 
+                                      'block2_z': self.data.qpos[17], 
+                                      'block3_x': self.data.qpos[18], 
+                                      'block3_y': self.data.qpos[19], 
+                                      'block3_z': self.data.qpos[20], 
+                                      'block4_x': self.data.qpos[21], 
+                                      'block4_y': self.data.qpos[22], 
+                                      'block4_z': self.data.qpos[23], 
+                                      'block5_x': self.data.qpos[24], 
+                                      'block5_y': self.data.qpos[25], 
+                                      'block5_z': self.data.qpos[26], 
                                       'drawer': self.data.qpos[-1],
                                       'hand_x': self.get_endeff_pos()[0],
                                       'hand_y': self.get_endeff_pos()[1],
@@ -833,7 +833,7 @@ class Tabletop(SawyerXYZEnv):
         threshold = 0.05
         repeat = True
         _iters = 0
-        self.reset()
+        self.reset_model()
         while repeat:
             obj_num = 3
             if self.new_door:
@@ -845,13 +845,13 @@ class Tabletop(SawyerXYZEnv):
                 if self.door or self.new_door or self.drawer: 
                     self.obj_init_pos = obs[(i+1)*3:((i+1)*3)+3]
                     self._set_obj_xyz(self.obj_init_pos)
-                    object_qpos = self.sim.data.get_joint_qpos('objGeom{}_x'.format(i))
-                    object_qpos[:3 ] = self.obj_init_pos
-                    object_qpos[3:] = 0.
-                    self.sim.data.set_joint_qpos('objGeom{}_x'.format(i), object_qpos)
-                    object_qvel = self.sim.data.get_joint_qvel('objGeom{}_x'.format(i))
-                    object_qvel[:] = 0.
-                    self.sim.data.set_joint_qvel('objGeom{}_x'.format(i), object_qvel)
+                    # object_qpos = self.sim.data.get_joint_qpos('objGeom{}_x'.format(i))
+                    # object_qpos[:3 ] = self.obj_init_pos
+                    # object_qpos[3:] = 0.
+                    # self.sim.data.set_joint_qpos('objGeom{}_x'.format(i), object_qpos)
+                    # object_qvel = self.sim.data.get_joint_qvel('objGeom{}_x'.format(i))
+                    # object_qvel[:] = 0.
+                    # self.sim.data.set_joint_qvel('objGeom{}_x'.format(i), object_qvel)
                 else:
                     self.obj_init_pos = obs[(i+1)*3:((i+1)*3)+2]
                     self._set_obj_xyz(self.obj_init_pos)
@@ -886,11 +886,10 @@ class Tabletop(SawyerXYZEnv):
             imgs.append(im)
             
         im = self.sim.render(64, 64, camera_name='cam0')
-        if savename == None: 
-            return im
+        # if savename == None: 
+        #    return im
 
-        with imageio.get_writer(
-                savename + '.gif', mode='I') as writer:
+        with imageio.get_writer('/iris/u/hjnam/task_exp/our-smm/sv2p/07_20/door2/test.gif', mode='I') as writer:
             for e in range(actions.shape[0] + 1):
                 writer.append_data(imgs[e])
         return im
@@ -965,10 +964,10 @@ class Tabletop(SawyerXYZEnv):
                 self.sim.data.set_joint_qvel('objGeom{}_x'.format(i), object_qvel)
             self.obj_init_pos = init_pos
             
-#             object_qpos = self.sim.data.get_joint_qpos('objGeom{}_x'.format(i))
-#             object_qpos[:3] = init_pos
-#             object_qpos[3:] = 0.
             if self.door or self.new_door: 
+                object_qpos = self.sim.data.get_joint_qpos('objGeom{}_x'.format(i))
+                object_qpos[:3] = init_pos
+                object_qpos[3:] = 0.
                 self.sim.data.set_joint_qpos("objGeom{}_x".format(i), object_qpos)
             self._set_obj_xyz(self.obj_init_pos)
 

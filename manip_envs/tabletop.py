@@ -3,7 +3,7 @@ import numpy as np
 from gym.spaces import  Dict , Box
 import math
 import os
-import torch
+# import torch
 from metaworld.envs.mujoco.sawyer_xyz.base import SawyerXYZEnv
 from PIL import Image
 from pyquaternion import Quaternion
@@ -832,47 +832,50 @@ class Tabletop(SawyerXYZEnv):
         im = self.sim.render(64, 64, camera_name ='cam0')
         return im
 
-    def take_steps_and_render(self, obs, actions, savename):
+    def take_steps_and_render(self, obs, actions, savename, set_qpos=None):
         '''Returns image after having taken actions from obs.'''
         threshold = 0.05
         repeat = True
         _iters = 0
-        self.reset_model()
-        while repeat:
-            obj_num = 3
-            if self.new_door:
-                obj_num = 5
-            elif self.drawer:
-                obj_num = 6
-            for i in range(obj_num):
-                self.targetobj = i
-                if self.door or self.new_door or self.drawer: 
-                    self.obj_init_pos = obs[(i+1)*3:((i+1)*3)+3]
-                    self._set_obj_xyz(self.obj_init_pos)
-                    # object_qpos = self.sim.data.get_joint_qpos('objGeom{}_x'.format(i))
-                    # object_qpos[:3 ] = self.obj_init_pos
-                    # object_qpos[3:] = 0.
-                    # self.sim.data.set_joint_qpos('objGeom{}_x'.format(i), object_qpos)
-                    # object_qvel = self.sim.data.get_joint_qvel('objGeom{}_x'.format(i))
-                    # object_qvel[:] = 0.
-                    # self.sim.data.set_joint_qvel('objGeom{}_x'.format(i), object_qvel)
+        if set_qpos is not None:
+            self.data.qpos[:] = set_qpos.copy()
+        else:
+            self.reset_model()
+            while repeat:
+                obj_num = 3
+                if self.new_door:
+                    obj_num = 5
+                elif self.drawer:
+                    obj_num = 6
+                for i in range(obj_num):
+                    self.targetobj = i
+                    if self.door or self.new_door or self.drawer: 
+                        self.obj_init_pos = obs[(i+1)*3:((i+1)*3)+3]
+                        self._set_obj_xyz(self.obj_init_pos)
+                        # object_qpos = self.sim.data.get_joint_qpos('objGeom{}_x'.format(i))
+                        # object_qpos[:3 ] = self.obj_init_pos
+                        # object_qpos[3:] = 0.
+                        # self.sim.data.set_joint_qpos('objGeom{}_x'.format(i), object_qpos)
+                        # object_qvel = self.sim.data.get_joint_qvel('objGeom{}_x'.format(i))
+                        # object_qvel[:] = 0.
+                        # self.sim.data.set_joint_qvel('objGeom{}_x'.format(i), object_qvel)
+                    else:
+                        self.obj_init_pos = obs[(i+1)*3:((i+1)*3)+2]
+                        self._set_obj_xyz(self.obj_init_pos)
+                if not (self.door or self.new_door):
+                    error = np.linalg.norm(obs[3:12] - self.data.qpos[9:18])
+                    repeat = (error >= threshold)
+                    _iters += 1
                 else:
-                    self.obj_init_pos = obs[(i+1)*3:((i+1)*3)+2]
-                    self._set_obj_xyz(self.obj_init_pos)
-            if not (self.door or self.new_door):
-                error = np.linalg.norm(obs[3:12] - self.data.qpos[9:18])
-                repeat = (error >= threshold)
-                _iters += 1
-            else:
-                break
-            if _iters > 10:
-                break
-        repeat = True
-        _iters = 0
-        if self.door or self.new_door: 
-            self.change_door_angle(obs[-1])
-            door_vel = np.array([0.])
-            self.sim.data.set_joint_qvel('doorjoint', door_vel)
+                    break
+                if _iters > 10:
+                    break
+            repeat = True
+            _iters = 0
+            if self.door or self.new_door: 
+                self.change_door_angle(obs[-1])
+                door_vel = np.array([0.])
+                self.sim.data.set_joint_qvel('doorjoint', door_vel)
 #         elif self.drawer:
 #             self.data.qpos[-1] = angle
 #             door_vel = np.array([0.])

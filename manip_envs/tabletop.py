@@ -725,6 +725,7 @@ class Tabletop(SawyerXYZEnv):
             # block_3_pos = [-0.15, 0.4, 0.075]
             # block_4_pos = [0.2, 0.6, 0.075]
             # block_5_pos = [-0.2, 0.7, 0.075]
+            self.change_door_angle(angle)
             gripper_pos = self.data.get_site_xpos('handleStart')
 #             gripper_pos = self.sim.data.get_geom_xpos('handle')
             goal_pos = np.concatenate([gripper_pos, block_0_pos, block_1_pos, block_2_pos, block_3_pos, block_4_pos, block_5_pos])

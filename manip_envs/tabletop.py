@@ -517,7 +517,10 @@ class Tabletop(SawyerXYZEnv):
         elif self.drawer:
             self.data.qpos[-1] = -0.05
         self.sim.forward()
-        
+        #self.data.qpos[:3] = self.data.qpos[3:6].copy()
+        #self.data.qpos[0] -= 0.05
+        #self.data.qpos[1] += 4.
+        #print(self.data.qpos)  
         o = self.get_obs()
         
         if self.epcount % self.log_freq == 0:
@@ -682,7 +685,7 @@ class Tabletop(SawyerXYZEnv):
             block_1_pos = self.data.qpos[16:19]
             block_2_pos = self.data.qpos[23:26]
             if self.tower or self.double_target:
-                block_0_pos = [-0.2, 0.7, 0.075]
+                block_0_pos = [-0.15, 0.8, 0.075]
                 block_1_pos = [-0.12, 0.6, 0.075]
                 block_2_pos = [0.25, 0.4, 0.075]
             gripper_pos = self.sim.data.get_geom_xpos('handle')
@@ -823,6 +826,9 @@ class Tabletop(SawyerXYZEnv):
         if self.door or self.new_door or self.drawer:
             print('goal pos: {}'.format(goal_pos))
             print('goal angle: {}'.format(angle))
+
+            goal_pos[3:6] = [-0.15, 0.8, 0.075]
+            # goal_pos[3:6] = np.array([-.2, 0.7, 0.075])
             goal_img = self.save_goal_img(None, goal_pos, 0, angle=angle)
         else:
             goal_img = self.save_goal_img(None, goal_pos, 0)

@@ -40,20 +40,14 @@ class Tabletop(SawyerXYZEnv):
             drawer=False,
             stack = False,
             exploration = "hard",
-            low_dim=False, #True,
             filepath="test",
             max_path_length=50,
             verbose=1,
-            double_target=False,
             hard=False,
             log_freq=100, # in terms of episode num
-            smm=True, #False,
-            exploration_only=False,
             **kwargs
     ):
         self.randomize = False
-        self.smm = smm
-        self.double_target = double_target
         self.tower = tower # Makes blocks tall when door is added to the env
         self.debug_count = 0
         self.new_door = new_door
@@ -91,7 +85,6 @@ class Tabletop(SawyerXYZEnv):
             goal_high = self.hand_high
 
         self.imsize= 64
-        self.lowdim = low_dim
         self.liftThresh = liftThresh
         self.rewMode = rewMode
         self.rotMode = rotMode
@@ -106,31 +99,10 @@ class Tabletop(SawyerXYZEnv):
             np.hstack((self.hand_high, obj_high)),
         )
 
-        if self.lowdim:
-            if self.smm:
-                # Observations are : gripper xyz, block0 xyz, block1 xyz, block2 xyz, 
-                    # block0 dxdydz, block1 dxdydz, block2 dxdydz, gripper left and right, gripper z joint
-                # Total dim: 3 + 9 + 9 + 2 + 1 = 24
-                self.observation_space = Box(0, 1.0, (24,))
-            else: 
-                self.observation_space = Dict({
-                    'state_observation':Box(0, 1.0, (24,))
-                })
-        else:
-            if self.smm:
-                self.imsize = 64 #64
-                self.observation_space = Box(0, 1.0, (self.imsize*self.imsize*3, ))
-            else: 
-                self.observation_space = Dict({
-                  'image_observation':Box(0, 1.0, (self.imsize*self.imsize*3, )),
-                  'image_desired_goal':Box(0, 1.0, (self.imsize*self.imsize*3, )),
-                  'image_achieved_goal':Box(0, 1.0, (self.imsize*self.imsize*3, ))
-                })
-            
+        self.imsize = 64 #64
+        self.observation_space = Box(0, 1.0, (self.imsize*self.imsize*3, ))
         self.goal_space = self.observation_space
         
-        # Extra
-        self.exploration_only = exploration_only # compute_reward returns 0.0
         
         '''For Logging'''
         self.verbose = verbose
@@ -162,8 +134,6 @@ class Tabletop(SawyerXYZEnv):
                 filename = os.path.join(dirname, "../assets/sawyer_xyz/sawyer_multiobject_door_v2.xml") # three stacked blocks plus door
                 if self.tower:
                     filename = os.path.join(dirname, "../assets/sawyer_xyz/sawyer_multiobject_door_v3.xml") # three tall blocks spread out plus door
-                if self.double_target:
-                    filename = os.path.join(dirname, "../assets/sawyer_xyz/sawyer_multiobject_door_block.xml")
             elif self.new_door:
                 filename = os.path.join(dirname, "../assets/sawyer_xyz/sawyer_tower_0714.xml") # three tall blocks spread out plus door
             elif self.drawer:
@@ -296,35 +266,8 @@ class Tabletop(SawyerXYZEnv):
                                   'hand_z': self.get_endeff_pos()[2],
                                   'dist': - self.compute_reward()}
    
-    def get_obs(self, goal=False):
-        if self.lowdim:
-            if goal:
-                return self.goalst
-            gpos = self.get_endeff_pos()
-            gquat = self.data.mocap_quat[0]
-            gleft = self.data.qpos[7]
-            gright = self.data.qpos[8]
-            zjoint = self.data.qpos[6]
-            objpos = self.data.qpos[9:18]
-            objvel = self.data.qvel[9:18]
-            obs = np.concatenate([gpos, objpos, objvel, np.array([gleft]), np.array([gright]), np.array([zjoint])])
-            
-            obs = {'state_observation' :obs}
-            
-            # for smm
-            if self.smm:
-                return obs['state_observation']
-        else:
-            if goal:
-                return self.goalim
-            im = self.render() #.flatten()
-            obs = {'image_observation' :im}
-            obs['image_desired_goal'] = self.goalim
-            obs['image_achieved_goal'] = im
-            
-            if self.smm:
-                return obs['image_observation']
-            
+    def get_obs(self):
+        obs = self.render()
         return obs
 
     def _get_info(self):
@@ -460,7 +403,7 @@ class Tabletop(SawyerXYZEnv):
                 if self.door:
                     init_pos = [-0.15, 0.75, 0.05 * (i+1)]
                     init_pos[:2] += np.random.normal(loc=0, scale=0.001, size=2)
-                    if self.tower or self.double_target:
+                    if self.tower:
                         if i == 0:
                             init_pos = [-0.15, 0.8, 0.075]
                         if i == 1:
@@ -512,7 +455,7 @@ class Tabletop(SawyerXYZEnv):
                     object_qpos[:3 ] = init_pos
                     object_qpos[3:] = 0.
                     self.sim.data.set_joint_qpos('objGeom{}_x'.format(i), object_qpos)
-        if self.door or self.new_door or self.double_target:
+        if self.door or self.new_door:
             self.change_door_angle(0.0)
         elif self.drawer:
             self.data.qpos[-1] = -0.05
@@ -644,17 +587,8 @@ class Tabletop(SawyerXYZEnv):
         return self.data.site_xpos[_id].copy()
 
     def compute_reward(self):
-        if self.exploration_only: # if not goal-conditioned
-            return 0.0
-        if self.door or self.new_door:
-            start_id = 9 + self.targetobj*7
-        else:
-            start_id = 9 + self.targetobj*3
-        qpos = self.data.qpos.flat.copy()
-        ogpos = qpos[start_id:(start_id+2)]
-        dist = np.linalg.norm(ogpos - self._state_goal)
-        return - dist
-      
+        return 0.0
+
     def is_goal(self):
         d = self.compute_reward()
         if (d < 0.08):
@@ -684,12 +618,12 @@ class Tabletop(SawyerXYZEnv):
             block_0_pos = self.data.qpos[9:12]
             block_1_pos = self.data.qpos[16:19]
             block_2_pos = self.data.qpos[23:26]
-            if self.tower or self.double_target:
+            if self.tower:
                 block_0_pos = [-0.15, 0.8, 0.075]
                 block_1_pos = [-0.12, 0.6, 0.075]
                 block_2_pos = [0.25, 0.4, 0.075]
             gripper_pos = self.sim.data.get_geom_xpos('handle')
-            if self.double_target and block is not None:
+            if block is not None:
                 block_1_pos[:2] += np.random.uniform(-.05, 0.05, (2,))
                 gripper_pos = block_1_pos.copy()
                 gripper_pos[:2] += np.random.uniform(-0.02, 0.02, (2,))
@@ -940,7 +874,7 @@ class Tabletop(SawyerXYZEnv):
                 init_pos = [-0.15, 0.75, 0.05 * (i+1)]
                 init_pos[:2] += np.random.normal(loc=0, scale=0.001, size=2)
             
-                if self.tower or self.double_target:
+                if self.tower:
                     if i == 0:
                         init_pos = [-0.15, 0.8, 0.075]
                     if i == 1:

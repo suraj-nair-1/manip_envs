@@ -128,9 +128,6 @@ class Tabletop(SawyerXYZEnv):
                 filename = os.path.join(dirname, "../assets/sawyer_xyz/sawyer_multiobject_hard.xml") # three blocks but spread out
         return filename
 
-    def change_door_angle(self, angle):
-        self.data.qpos[-1] = angle
-    
     def step(self, action):
         self.set_xyz_action_rotz(action[:4])
         self.do_simulation([action[-1], -action[-1]])
@@ -354,7 +351,7 @@ class Tabletop(SawyerXYZEnv):
                     object_qpos[3:] = 0.
                     self.sim.data.set_joint_qpos('objGeom{}_x'.format(i), object_qpos)
         if self.door or self.new_door:
-            self.change_door_angle(0.0)
+            self.data.qpos[-1] = 0.
         elif self.drawer:
             self.data.qpos[-1] = -0.05
         self.sim.forward()
@@ -463,7 +460,7 @@ class Tabletop(SawyerXYZEnv):
                 gripper_pos = block_1_pos.copy()
                 gripper_pos[:2] += np.random.uniform(-0.02, 0.02, (2,))
                 gripper_pos[-1] += np.random.uniform(-0.01, 0.01, (1,))
-            self.change_door_angle(angle)
+            self.data.qpos[-1] = angle
             goal_pos = np.concatenate([gripper_pos, block_0_pos, block_1_pos, block_2_pos])
         elif self.new_door:
             while abs(angle) < 0.0872665:# larger than 5 degrees angle
@@ -477,7 +474,7 @@ class Tabletop(SawyerXYZEnv):
             block_2_pos = [0.25, 0.4, 0.075]
             gripper_pos = self.sim.data.get_geom_xpos('handle')
             goal_pos = np.concatenate([gripper_pos, block_0_pos, block_1_pos, block_2_pos, block_3_pos, block_4_pos])
-            self.change_door_angle(angle)
+            self.data.qpos[-1] = angle
             
         elif self.drawer:
             # slightly increased the goal range from (0, 0.2) to below
@@ -491,7 +488,7 @@ class Tabletop(SawyerXYZEnv):
             block_3_pos = [-0.15, 0.4, 0.05]
             block_4_pos = [0.45, 0.6, 0.05]
             block_5_pos = [-0.2, 0.7, 0.05]
-            self.change_door_angle(angle)
+            self.data.qpos[-1] = angle
             gripper_pos = self.data.get_site_xpos('handleStart')
             goal_pos = np.concatenate([gripper_pos, block_0_pos, block_1_pos, block_2_pos, block_3_pos, block_4_pos, block_5_pos])
             
@@ -578,7 +575,7 @@ class Tabletop(SawyerXYZEnv):
     
     ''' Logging Code: Saves gifs of every log_freq episode, heat maps of gripper and block positions, and plots of gripper-block distances '''
 
-    def take_steps_and_render(self, obs, actions, savename, set_qpos=None):
+    def take_steps(self, obs, actions, savename, set_qpos=None):
         '''Returns image after having taken actions from obs.'''
         threshold = 0.05
         repeat = True
@@ -612,7 +609,7 @@ class Tabletop(SawyerXYZEnv):
             repeat = True
             _iters = 0
             if self.door or self.new_door: 
-                self.change_door_angle(obs[-1])
+                self.data.qpos[-1] = obs[-1]
                 door_vel = np.array([0.])
                 self.sim.data.set_joint_qvel('doorjoint', door_vel)
             elif self.drawer:
@@ -630,9 +627,7 @@ class Tabletop(SawyerXYZEnv):
             self.do_simulation([action[-1], -action[-1]])
             im = self.sim.render(64, 64, camera_name='cam0')
             imgs.append(im)
-            
-        im = self.sim.render(64, 64, camera_name='cam0')
-        return im
+        return imgs
         
     def _restore(self):
         '''For resetting the env without having to call reset() (i.e. without updating episode count)'''
@@ -680,8 +675,8 @@ class Tabletop(SawyerXYZEnv):
             self.sim.forward()
         
         if angle is not None:
-            self.change_door_angle(angle)
-        im = self.sim.render(64, 64, camera_name='cam0') #cam0')
+            self.data.qpos[-1] = angle
+        im = self.sim.render(64, 64, camera_name='cam0')
         return im
 
     

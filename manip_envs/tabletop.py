@@ -23,10 +23,6 @@ class Tabletop(SawyerXYZEnv):
             self,
             obj_low=None,
             obj_high=None,
-            random_init=False,
-            tasks = [{'goal': np.array([0.1, 0.8, 0.2]),  
-                      'obj_init_pos':np.array([0, 0.6, 0.02]), 
-                      'obj_init_angle': 0.3}], 
             goal_low=None,
             goal_high=None,
             hand_init_pos=(0, 0.6, 0.2),
@@ -49,7 +45,6 @@ class Tabletop(SawyerXYZEnv):
     ):
         self.randomize = False
         self.tower = tower # Makes blocks tall when door is added to the env
-        self.debug_count = 0
         self.new_door = new_door
         self.door = door # if True, add door to the env
         self.hard = hard # if True, blocks are initialized to diff corners
@@ -84,7 +79,6 @@ class Tabletop(SawyerXYZEnv):
         if goal_high is None:
             goal_high = self.hand_high
 
-        self.imsize= 64
         self.liftThresh = liftThresh
         self.rewMode = rewMode
         self.rotMode = rotMode
@@ -99,10 +93,9 @@ class Tabletop(SawyerXYZEnv):
             np.hstack((self.hand_high, obj_high)),
         )
 
-        self.imsize = 64 #64
+        self.imsize = 64
         self.observation_space = Box(0, 1.0, (self.imsize*self.imsize*3, ))
         self.goal_space = self.observation_space
-        
         
         '''For Logging'''
         self.verbose = verbose
@@ -112,17 +105,8 @@ class Tabletop(SawyerXYZEnv):
             if not os.path.exists(self.filepath):
                 os.makedirs(self.filepath)
         self.log_freq = log_freq
-        self.epcount = 0 # num episodes so far (start from 1 for logging simplicity)
+        self.epcount = 0 # num episodes so far 
         self.good_qpos = None #self.data.qpos[:7]
-        self.hand_memory = []
-        self.obj_memory0 = []
-        self.obj_memory1 = []
-        self.obj_memory2 = []
-        self.interaction = False # True if you want to log hand-block distances, false otherwise
-        if self.interaction:
-            self.block0_interaction = []
-            self.block1_interaction = []
-            self.block2_interaction = []
 
     @property
     def model_name(self):
@@ -145,10 +129,7 @@ class Tabletop(SawyerXYZEnv):
         return filename
 
     def change_door_angle(self, angle):
-        # old_jt = self.data.qpos.copy()[-1]
         self.data.qpos[-1] = angle
-        # self.sim.data.set_joint_qpos('doorjoint', angle)
-        # print("Door joint before: {} | now: {}".format(old_jt, self.data.qpos[-1]))
     
     def step(self, action):
         self.set_xyz_action_rotz(action[:4])
@@ -164,32 +145,13 @@ class Tabletop(SawyerXYZEnv):
         
         '''
         For logging
-        Save object interaction from the past ~self.log_freq episodes
-        Render images from every step if current episode = log_freq_episode
+        Render images from every step if saving current episode
         '''
         if self.verbose:
-            hand = self.get_endeff_pos()[:3].copy()
-            # get_geom_xpos('objGeom0') = same as get_site_xpos('obj0')
-            block0 = self.data.get_geom_xpos('objGeom0')[:3].copy()
-            block1 = self.data.get_geom_xpos('objGeom1')[:3].copy()
-            block2 = self.data.get_geom_xpos('objGeom2')[:3].copy()
-            self.hand_memory.append(hand)
-            self.obj_memory0.append(block0)
-            self.obj_memory1.append(block1)
-            self.obj_memory2.append(block2)
-                
             if self.epcount % self.log_freq == 0:
-                im = self.sim.render(64, 64, camera_name='cam0')
+                im = self.sim.render(self.imsize, self.imsize, camera_name='cam0')
                 self.imgs.append(im)
-                # cv2.imwrite(self.filepath + '/obs'+str(self.cur_path_length)+'.png', (cv2.cvtColor(im, cv2.COLOR_BGR2RGB)).astype(np.uint8))
-                
-            if self.interaction:
-                dist0 = np.linalg.norm(block0 - hand)
-                dist1 = np.linalg.norm(block1 - hand)
-                dist2 = np.linalg.norm(block2 - hand)
-                self.block0_interaction.append(dist0)
-                self.block1_interaction.append(dist1)
-                self.block2_interaction.append(dist2)
+
         self.cur_path_length +=1
         if self.door:
             return ob, reward, done, {'green_x': self.data.qpos[9], 
@@ -206,7 +168,7 @@ class Tabletop(SawyerXYZEnv):
                                       'hand_y': self.get_endeff_pos()[1],
                                       'hand_z': self.get_endeff_pos()[2],
                                       'dist': - self.compute_reward()}
-        if self.new_door:
+        elif self.new_door:
             return ob, reward, done, {'green_x': self.data.qpos[9], 
                                       'green_y': self.data.qpos[10], 
                                       'green_z': self.data.qpos[11], 
@@ -267,11 +229,8 @@ class Tabletop(SawyerXYZEnv):
                                   'dist': - self.compute_reward()}
    
     def get_obs(self):
-        obs = self.render()
+        obs = self.sim.render(self.imsize, self.imsize, camera_name="cam0")  / 255.
         return obs
-
-    def _get_info(self):
-        pass
     
     def _set_obj_xyz(self, pos):
         qpos = self.data.qpos.flat.copy()
@@ -289,87 +248,26 @@ class Tabletop(SawyerXYZEnv):
             qpos[start_id:(start_id+3)] = pos.copy()
             qvel[start_id:(start_id+3)] = 0
         self.set_state(qpos, qvel)
-
-    def render(self, mode=""):
-        i =  self.sim.render(self.imsize, self.imsize, camera_name="cam0")  / 255. #cam0
-        #i = np.swapaxes(i, 0, 2)
-        return i
-      
-    def get_goal(self):
-        goal  = {}
-        goal['image_desired_goal'] = self.goalim
-        return goal
-      
-    def set_goal(self, goal):
-        self.goalim = goal
-
-    def sample_goal(self):
-        start_id = 9 + self.targetobj*3
-        if self.door or self.new_door:
-            start_id = 9 + self.targetobj*7
-        elif self.drawer:
-            start_id = 18 + self.targetobj*7
-        qpos = self.data.qpos.flat.copy()
-        ogpos = qpos[start_id:(start_id+2)]
-        goal_pos = np.random.uniform(
-                -0.2,
-                0.2,
-                size=(2,),
-            )
-        self._state_goal = goal_pos 
-        self._set_obj_xyz(goal_pos) 
-        self.goalim = self.render().flatten()
-        self.goalst = np.concatenate([self.get_endeff_pos(), self.data.qpos[9:]])
-        self._reset_hand()
-        self._set_obj_xyz(ogpos)
-
-    def sample_goals(self, bs):
-        self.reset()
-        ims = []
-        for i in range(bs):
-          self.sample_goal()
-          ims.append(self.goalim)
-        ims = np.stack(ims)
-        return {'image_desired_goal': ims}
           
     def initialize(self):
         self.epcount = -1 # to ensure the first episode starts with 0 idx
         self.cur_path_length = 0
-        self.hand_memory = []
-        self.obj_memory0 = []
-        self.obj_memory1 = []
-        self.obj_memory2 = []
-        if self.interaction:
-            self.block0_interaction = []
-            self.block1_interaction = []
-            self.block2_interaction = []
 
-    def reset_model(self, no_reset=False, add_noise=False):
+    def reset_model(self, no_reset=False, add_noise=False, just_restore=False):
         ''' For logging '''
-        if self.verbose:
+        if self.verbose and not just_restore:
             if self.epcount % self.log_freq == 0:
-                self.save_distribution()
-                if self.interaction:
-                    self.save_block_interaction()
-                # reset the memories
-                self.hand_memory = []
-                self.obj_memory0 = []
-                self.obj_memory1 = []
-                self.obj_memory2 = []
-                if self.interaction:
-                    self.block0_interaction = []
-                    self.block1_interaction = []
-                    self.block2_interaction = []
+                # save gif of episode
                 self.save_gif()
         self.cur_path_length = 0
-        self.epcount += 1
+        if not just_restore:
+            self.epcount += 1
         
         if not no_reset: # reset initial block pos
             self._reset_hand()
             for _ in range(100):
                 self.do_simulation([0.0, 0.0])
             self.targetobj = np.random.randint(3)
-            self.sample_goal()
             self.cur_path_length = 0
             obj_num = 3
             if self.new_door:
@@ -386,7 +284,7 @@ class Tabletop(SawyerXYZEnv):
                 )
                 elif self.hard:
                     if i == 0:
-                        init_pos = [-.2, 0] #-0.15]
+                        init_pos = [-.2, 0]
                     elif i == 1:
                         init_pos = [-.1, .15]
                     else:
@@ -430,17 +328,17 @@ class Tabletop(SawyerXYZEnv):
                 
                 elif self.drawer:
                     if i == 0:
-                        init_pos = [0.35, 0.3, 0.005]
+                        init_pos = [0.35, 0.3, 0.05]
                     if i == 1:
-                        init_pos = [-0.12, 0.6, 0.005]
+                        init_pos = [-0.12, 0.6, 0.05]
                     if i == 2:
-                        init_pos = [0.2, 0.3, 0.005]
+                        init_pos = [0.2, 0.3, 0.05]
                     if i == 3:
-                        init_pos = [-0.15, 0.4, 0.005]
+                        init_pos = [-0.15, 0.4, 0.05]
                     if i == 4:
-                        init_pos = [0.45, 0.6, 0.005]
+                        init_pos = [0.45, 0.6, 0.05]
                     if i == 5:
-                        init_pos = [-0.2, 0.7, 0.005]
+                        init_pos = [-0.2, 0.7, 0.05]
                     object_qvel = self.sim.data.get_joint_qvel('objGeom{}_x'.format(i))
                     object_qvel[:] = 0.
                     self.sim.data.set_joint_qvel('objGeom{}_x'.format(i), object_qvel)
@@ -460,18 +358,12 @@ class Tabletop(SawyerXYZEnv):
         elif self.drawer:
             self.data.qpos[-1] = -0.05
         self.sim.forward()
-        #self.data.qpos[:3] = self.data.qpos[3:6].copy()
-        #self.data.qpos[0] -= 0.05
-        #self.data.qpos[1] += 4.
-        #print(self.data.qpos)  
         o = self.get_obs()
         
-        if self.epcount % self.log_freq == 0:
+        if self.epcount % self.log_freq == 0 and not just_restore:
             self.imgs = []
-            im = self.sim.render(64, 64, camera_name='cam0')
+            im = self.sim.render(self.imsize, self.imsize, camera_name='cam0')
             self.imgs.append(im)
-            #cv2.imwrite(self.filepath + '/init.png', (cv2.cvtColor(im, cv2.COLOR_BGR2RGB)).astype(np.uint8))
-        
         low_dim_info = {'green_x': self.data.qpos[9], 
                         'green_y': self.data.qpos[10], 
                         'green_z': self.data.qpos[11], 
@@ -522,36 +414,8 @@ class Tabletop(SawyerXYZEnv):
                                       'hand_z': self.get_endeff_pos()[2],
                                       'dist': - self.compute_reward()}
 
-         #   return o, { 'green_x': self.data.get_site_xpos('obj0')[0], 
-         #               'green_y': self.data.get_site_xpos('obj0')[1], 
-         #               'green_z': self.data.get_site_xpos('obj0')[2], 
-         #               'pink_x': self.data.get_site_xpos('obj1')[0], 
-         #               'pink_y': self.data.get_site_xpos('obj1')[1], 
-         #               'pink_z': self.data.get_site_xpos('obj1')[2], 
-         #               'blue_x': self.data.get_site_xpos('obj2')[0], 
-         #               'blue_y': self.data.get_site_xpos('obj2')[1], 
-         #               'blue_z': self.data.get_site_xpos('obj2')[2], 
-         #               'door_joint': self.data.qpos[-1],
-         #               'hand_x': self.get_endeff_pos()[0],
-         #               'hand_y': self.get_endeff_pos()[1],
-         #               'hand_z': self.get_endeff_pos()[2],
-         #               'dist': - self.compute_reward()}
         return o, low_dim_info 
 
-# this wouldn't be reached anymore
-        return o, {'green_x': self.data.qpos[9], 
-                    'green_y': self.data.qpos[10], 
-                    'green_z': self.data.qpos[11], 
-                    'pink_x': self.data.qpos[12], 
-                    'pink_y': self.data.qpos[13], 
-                    'pink_z': self.data.qpos[14],
-                    'blue_x': self.data.qpos[15], 
-                    'blue_y': self.data.qpos[16], 
-                    'blue_z': self.data.qpos[17],
-                    'hand_x': self.get_endeff_pos()[0],
-                    'hand_y': self.get_endeff_pos()[1],
-                    'hand_z': self.get_endeff_pos()[2],
-                    'dist': - self.compute_reward()}
 
     def _reset_hand(self, pos=None):
         if self.epcount < 10 and self.cur_path_length == 0:
@@ -567,41 +431,12 @@ class Tabletop(SawyerXYZEnv):
         self.init_fingerCOM  =  (rightFinger + leftFinger)/2
         self.pickCompleted = False
 
-    # Can probably delete this
-    def reset_hand(self, grip_quat, fixed=False, grip_pos=None):
-        '''If need to fix grip_quat position, use this.'''
-        if fixed:
-            pos = grip_pos
-        else:
-            pos = self.hand_init_pos.copy()
-        for _ in range(100):
-            self.data.set_mocap_pos('mocap', pos)
-            self.data.set_mocap_quat('mocap', grip_quat)
-            self.do_simulation([-1,1], self.frame_skip)
-        rightFinger, leftFinger = self.get_site_pos('rightEndEffector'), self.get_site_pos('leftEndEffector')
-        self.init_fingerCOM  =  (rightFinger + leftFinger)/2
-        self.pickCompleted = False
-
     def get_site_pos(self, siteName):
         _id = self.model.site_names.index(siteName)
         return self.data.site_xpos[_id].copy()
 
     def compute_reward(self):
         return 0.0
-
-    def is_goal(self):
-        d = self.compute_reward()
-        if (d < 0.08):
-            return 1
-        else:
-            return 0
-        
-    def get_diagnostics(self, paths, prefix=''):
-        statistics = OrderedDict()
-        return statistics
-
-    def log_diagnostics(self, paths = None, logger = None):
-        pass
     
     def get_goal(self, block, fixed_angle=None):
         ''' Returns a random goal img depending on the desired block/door '''
@@ -650,21 +485,14 @@ class Tabletop(SawyerXYZEnv):
             angle = -angle
             if fixed_angle is not None:
                 angle = fixed_angle
-            block_0_pos = [0.35, 0.3, 0.005]
-            block_1_pos = [-0.12, 0.6, 0.005]
-            block_2_pos = [0.2, 0.3, 0.005]
-            block_3_pos = [-0.15, 0.4, 0.005]
-            block_4_pos = [0.45, 0.6, 0.005]
-            block_5_pos = [-0.2, 0.7, 0.005]
-            # block_0_pos = [-0.15, 0.8, 0.075]
-            # block_1_pos = [-0.12, 0.6, 0.075]
-            # block_2_pos = [0.25, 0.4, 0.075]
-            # block_3_pos = [-0.15, 0.4, 0.075]
-            # block_4_pos = [0.2, 0.6, 0.075]
-            # block_5_pos = [-0.2, 0.7, 0.075]
+            block_0_pos = [0.35, 0.3, 0.05]
+            block_1_pos = [-0.12, 0.6, 0.05]
+            block_2_pos = [0.2, 0.3, 0.05]
+            block_3_pos = [-0.15, 0.4, 0.05]
+            block_4_pos = [0.45, 0.6, 0.05]
+            block_5_pos = [-0.2, 0.7, 0.05]
             self.change_door_angle(angle)
             gripper_pos = self.data.get_site_xpos('handleStart')
-#             gripper_pos = self.sim.data.get_geom_xpos('handle')
             goal_pos = np.concatenate([gripper_pos, block_0_pos, block_1_pos, block_2_pos, block_3_pos, block_4_pos, block_5_pos])
             
         elif self.stack:
@@ -693,11 +521,6 @@ class Tabletop(SawyerXYZEnv):
                         (-.22, -0.02, 0.0),  
                         (-.18, 0.02, 0.20), 
                         size=(3,)) 
-            while np.linalg.norm(block_0_pos - block_1_pos) < 0.06 or np.linalg.norm(block_0_pos - block_2_pos) < 0.06: # ensure the blocks do not overlap
-                block_0_pos = np.random.uniform( # green block
-                        (-.22, -0.16, 0.0),  
-                        (-.18, -0.14, 0.20), 
-                        size=(3,)) 
             block_0_pos += np.random.uniform(-0.02, 0.02, (3,))
             # Make goal pos: Random first block initialization, want gripper hovering over block 
             gripper_pos = block_0_pos.copy()
@@ -714,17 +537,12 @@ class Tabletop(SawyerXYZEnv):
                     (0.1, 0.25, 0.20),
                     size=(3,))
             if self.hard:
-                block_0_pos = [-.2, -.15, 0] + np.random.uniform(-0.02, 0.02, (3,))# pink block
+                block_0_pos = [-.2, 0, 0] + np.random.uniform(-0.02, 0.02, (3,))# pink block
                 block_2_pos = [.2, -.1, 0] + np.random.uniform(-0.02, 0.02, (3,)) # blue block
                 block_1_pos = np.random.uniform( 
                         (-.12, 0.13, 0.0),  
                         (-.08, 0.17, 0.20), 
                         size=(3,)) 
-            while np.linalg.norm(block_1_pos - block_0_pos) < 0.06 or np.linalg.norm(block_1_pos - block_2_pos) < 0.06: # ensure the blocks do not overlap
-                block_1_pos = np.random.uniform( 
-                        (-.15, 0.13, 0.0),  
-                        (-.05, 0.17, 0.20), 
-                        size=(3,))
             block_1_pos += np.random.uniform(-0.02, 0.02, (3,))
             gripper_pos = block_1_pos.copy()
             gripper_pos += np.random.uniform(-0.02, 0.02, (3,))
@@ -739,17 +557,12 @@ class Tabletop(SawyerXYZEnv):
                     (0.2, 0.2, 0.20), 
                     size=(3,)) 
             if self.hard:
-                block_0_pos = [-.2, -.15, 0] + np.random.uniform(-0.02, 0.02, (3,))# pink block
+                block_0_pos = [-.2, 0, 0] + np.random.uniform(-0.02, 0.02, (3,))# pink block
                 block_1_pos = [-.1, .15, 0] + np.random.uniform(-0.02, 0.02, (3,))# pink block
                 block_2_pos = np.random.uniform( # green block
                         (.18, -0.12, 0.0),  
                         (.22, -0.08, 0.20), 
                         size=(3,)) 
-            while np.linalg.norm(block_2_pos - block_1_pos) < 0.06 or np.linalg.norm(block_2_pos - block_0_pos) < 0.06: # ensure the blocks do not overlap
-                block_2_pos = np.random.uniform( # green block
-                    (.15, -0.12, 0.0),  
-                    (.25, -0.08, 0.20), 
-                    size=(3,)) 
             block_2_pos += np.random.uniform(-0.02, 0.02, (3,))
             gripper_pos = block_2_pos.copy()
             gripper_pos += np.random.uniform(-0.02, 0.02, (3,))
@@ -758,20 +571,12 @@ class Tabletop(SawyerXYZEnv):
             goal_pos = np.concatenate((gripper_pos, block_0_pos, block_1_pos, block_2_pos))
         
         if self.door or self.new_door or self.drawer:
-            print('goal pos: {}'.format(goal_pos))
-            print('goal angle: {}'.format(angle))
-
-            goal_pos[3:6] = [-0.15, 0.8, 0.075]
-            # goal_pos[3:6] = np.array([-.2, 0.7, 0.075])
             goal_img = self.save_goal_img(None, goal_pos, 0, angle=angle)
         else:
             goal_img = self.save_goal_img(None, goal_pos, 0)
         return goal_img
     
     ''' Logging Code: Saves gifs of every log_freq episode, heat maps of gripper and block positions, and plots of gripper-block distances '''
-    def save_img(self):
-        im = self.sim.render(64, 64, camera_name ='cam0')
-        return im
 
     def take_steps_and_render(self, obs, actions, savename, set_qpos=None):
         '''Returns image after having taken actions from obs.'''
@@ -793,13 +598,6 @@ class Tabletop(SawyerXYZEnv):
                     if self.door or self.new_door or self.drawer: 
                         self.obj_init_pos = obs[(i+1)*3:((i+1)*3)+3]
                         self._set_obj_xyz(self.obj_init_pos)
-                        # object_qpos = self.sim.data.get_joint_qpos('objGeom{}_x'.format(i))
-                        # object_qpos[:3 ] = self.obj_init_pos
-                        # object_qpos[3:] = 0.
-                        # self.sim.data.set_joint_qpos('objGeom{}_x'.format(i), object_qpos)
-                        # object_qvel = self.sim.data.get_joint_qvel('objGeom{}_x'.format(i))
-                        # object_qvel[:] = 0.
-                        # self.sim.data.set_joint_qvel('objGeom{}_x'.format(i), object_qvel)
                     else:
                         self.obj_init_pos = obs[(i+1)*3:((i+1)*3)+2]
                         self._set_obj_xyz(self.obj_init_pos)
@@ -817,10 +615,10 @@ class Tabletop(SawyerXYZEnv):
                 self.change_door_angle(obs[-1])
                 door_vel = np.array([0.])
                 self.sim.data.set_joint_qvel('doorjoint', door_vel)
-#         elif self.drawer:
-#             self.data.qpos[-1] = angle
-#             door_vel = np.array([0.])
-#             self.sim.data.set_joint_qvel('handle', door_vel)
+            elif self.drawer:
+                self.data.qpos[-1] = angle
+                door_vel = np.array([0.])
+                self.sim.data.set_joint_qvel('handle', door_vel)
         self._reset_hand(pos=obs[:3])
         imgs = []
         im = self.sim.render(64, 64, camera_name='cam0')
@@ -834,139 +632,17 @@ class Tabletop(SawyerXYZEnv):
             imgs.append(im)
             
         im = self.sim.render(64, 64, camera_name='cam0')
-        # if savename == None: 
-        #    return im
-
-        with imageio.get_writer('/iris/u/hjnam/task_exp/our-smm/sv2p/07_20/door2/test.gif', mode='I') as writer:
-            for e in range(actions.shape[0] + 1):
-                writer.append_data(imgs[e])
         return im
         
     def _restore(self):
         '''For resetting the env without having to call reset() (i.e. without updating episode count)'''
-        self._reset_hand()
-#         pos = obs[:3]
-#         for _ in range(100): # Move gripper to pos
-#             self.data.set_mocap_pos('mocap', pos)
-#             self.data.set_mocap_quat('mocap', np.array([1, 0, 1, 0]))
-#             self.do_simulation([-1,1], self.frame_skip)
-#         rightFinger, leftFinger = self.get_site_pos('rightEndEffector'), self.get_site_pos('leftEndEffector')
-#         self.init_fingerCOM  =  (rightFinger + leftFinger)/2
-#         self.pickCompleted = False
-        
-        obj_num = 3
-        if self.new_door:
-            obj_num = 5
-        elif self.drawer:
-            obj_num = 6
-        for i in range(obj_num):
-            self.targetobj = i
-            if self.hard:
-                if i == 0:
-                    init_pos = [-.2, 0] #-0.15]
-                elif i == 1:
-                    init_pos = [-.1, .15]
-                else:
-                    init_pos = [ .2, -.1]
-            else:
-                init_pos = [0.1 * (i-1), 0.15]
-            if self.door:
-                init_pos = [-0.15, 0.75, 0.05 * (i+1)]
-                init_pos[:2] += np.random.normal(loc=0, scale=0.001, size=2)
-            
-                if self.tower:
-                    if i == 0:
-                        init_pos = [-0.15, 0.8, 0.075]
-                    if i == 1:
-                        init_pos = [-0.12, 0.6, 0.075]
-                    if i == 2:
-                        init_pos = [0.25, 0.4, 0.075]
-            elif self.new_door:
-                init_pos = [-0.15, 0.75, 0.05 * (i+1)]
-                init_pos[:2] += np.random.normal(loc=0, scale=0.001, size=2)
-                if i == 0:
-                    init_pos = [-0.15, 0.8, 0.075]
-                if i == 1:
-                    init_pos = [-0.12, 0.6, 0.075]
-                if i == 2:
-                    init_pos = [0.25, 0.4, 0.075]
-                if i == 3:
-                    init_pos = [0.25, 0.6, 0.075]
-                if i == 4:
-                    init_pos = [0.15, 0.6, 0.075]
-            elif self.drawer:
-                if i == 0:
-                    init_pos = [0.35, 0.3, 0.005]
-                if i == 1:
-                    init_pos = [-0.12, 0.6, 0.005]
-                if i == 2:
-                    init_pos = [0.2, 0.3, 0.005]
-                if i == 3:
-                    init_pos = [-0.15, 0.4, 0.005]
-                if i == 4:
-                    init_pos = [0.45, 0.6, 0.005]
-                if i == 5:
-                    init_pos = [-0.2, 0.7, 0.005]
-                object_qvel = self.sim.data.get_joint_qvel('objGeom{}_x'.format(i))
-                object_qvel[:] = 0.
-                self.sim.data.set_joint_qvel('objGeom{}_x'.format(i), object_qvel)
-            self.obj_init_pos = init_pos
-            
-            if self.door or self.new_door: 
-                object_qpos = self.sim.data.get_joint_qpos('objGeom{}_x'.format(i))
-                object_qpos[:3] = init_pos
-                object_qpos[3:] = 0.
-                self.sim.data.set_joint_qpos("objGeom{}_x".format(i), object_qpos)
-            self._set_obj_xyz(self.obj_init_pos)
+        self.reset_model(just_restore=True)
 
-        imgs = []
-        im = self.sim.render(64, 64, camera_name='cam0')
-        if self.new_door:
-            return {'green_x': self.data.qpos[9], 
-                    'green_y': self.data.qpos[10], 
-                    'green_z': self.data.qpos[11], 
-                    'pink_x': self.data.qpos[12], 
-                    'pink_y': self.data.qpos[13], 
-                    'pink_z': self.data.qpos[14],
-                    '3_x': self.data.qpos[18], 
-                    '3_y': self.data.qpos[19], 
-                    '3_z': self.data.qpos[20],
-                    '4_x': self.data.qpos[21], 
-                    '4_y': self.data.qpos[22], 
-                    '4_z': self.data.qpos[23],
-                    'door_joint':self.data.qpos[-1],
-                    'blue_x': self.data.qpos[15], 
-                    'blue_y': self.data.qpos[16], 
-                    'blue_z': self.data.qpos[17],
-                    'hand_x': self.get_endeff_pos()[0],
-                    'hand_y': self.get_endeff_pos()[1],
-                    'hand_z': self.get_endeff_pos()[2],
-                    'dist': - self.compute_reward()}
-        return {'green_x': self.data.qpos[9], 
-                'green_y': self.data.qpos[10], 
-                'green_z': self.data.qpos[11], 
-                'pink_x': self.data.qpos[12], 
-                'pink_y': self.data.qpos[13], 
-                'pink_z': self.data.qpos[14],
-                'blue_x': self.data.qpos[15], 
-                'blue_y': self.data.qpos[16], 
-                'blue_z': self.data.qpos[17],
-                'hand_x': self.get_endeff_pos()[0],
-                'hand_y': self.get_endeff_pos()[1],
-                'hand_z': self.get_endeff_pos()[2],
-                'dist': - self.compute_reward()}
-
-    def save_goal_img(self, PATH, goal, eps, step_thru=False, actions=None, angle=None):
+    def save_goal_img(self, PATH, goal, eps, actions=None, angle=None):
         '''Returns image with a given goal array of positions for the gripper and blocks.'''
-        # Move end effector to green block by simulation
-        # if angle is not None:
-        #    print("angle", angle)
-        #    self.change_door_angle(angle)
         if self.drawer:
-#             print(self.data.get_site_xpos('handleStart'))
             goal[:3] = self.data.get_site_xpos('handleStart')
         pos = goal[:3]
-#         print("init pos", pos)
         for _ in range(100):
             self.data.set_mocap_pos('mocap', pos)
             self.data.set_mocap_quat('mocap', np.array([1, 0, 1, 0]))
@@ -1003,8 +679,6 @@ class Tabletop(SawyerXYZEnv):
                 self.sim.data.set_joint_qvel('objGeom{}_x'.format(i), object_qvel)
             self.sim.forward()
         
-        # if step_thru: 
-            # only step thru actions if the flag is set to True & actions is not None
         if angle is not None:
             self.change_door_angle(angle)
         im = self.sim.render(64, 64, camera_name='cam0') #cam0')
@@ -1017,93 +691,5 @@ class Tabletop(SawyerXYZEnv):
                 self.filepath + '/Eps' + str(self.epcount) + '.gif', mode='I') as writer:
             for i in range(self.max_path_length + 1):
                 writer.append_data(self.imgs[i])
-                
-    def save_distribution(self):
-        ''' Saves the heat maps for hand and block positions '''
-        def draw(var_type, var1, var2, name1, name2):
-            if name1 == 'X' and name2 == 'Y':
-                if var_type == 0:
-                    val_range = [[-0.2, 0.2],[0.4, 0.8]]
-                else:
-                    val_range = [[-0.3, 0.4],[-0.2, 0.3]]
-            if name1 == 'X' and name2 == 'Z':
-                if var_type == 0:
-                    val_range = [[-0.2, 0.2], [0.0, 0.2]]
-                else:
-                    val_range = [[-0.3, 0.3], [0.0, 0.3]]
-            if name1 == 'Y' and name2 =='Z':
-                if var_type == 0:
-                    val_range = [[0.4, 0.8], [0.0, 0.2]]
-                else:
-                    val_range = [[-0.2, 0.3], [0.0, 0.3]]
-            # transform to density
-            
-            Xrange = np.arange(val_range[0][0]-0.05, val_range[0][1]+0.05, 0.05)
-            Yrange = np.arange(val_range[1][0]-0.05, val_range[1][1]+0.05, 0.05)
-            bins = Xrange, Yrange
-            var1 = list(var1)
-            var2 = list(var2)
-            H, xedges, yedges = np.histogram2d(var1, var2, bins=bins, range=val_range, density=False)
-            H = H / sum(sum(H))
 
-            # set consistent color bar
-            ax2dhist = plt.axes()
-            bounds = np.linspace(0.0, 1.0, 25)
-            colors = plt.get_cmap('viridis')(np.linspace(0, 1, len(bounds)+1))
-            cmap = mcolors.ListedColormap(colors[1:-1])
-            cmap.set_over(colors[-1])
-            cmap.set_under(colors[0])
-            norm = mcolors.BoundaryNorm(boundaries=bounds, ncolors=len(bounds)-1)
-            X, Y = np.meshgrid(Xrange, Yrange)
-            ax2dhist.pcolormesh(X, Y, np.swapaxes(H,0,1)) #, cmap=cmap)
-            sm = ScalarMappable(norm=norm) #, cmap=cmap)
-            sm.set_array([])
-            plt.colorbar(sm)
-            if var_type == 0:
-                var = 'gripper'
-            elif var_type == 1:
-                var = 'block0'
-            elif var_type == 2:
-                var = 'block1'
-            else:
-                var = 'block2'
-     
-            name = name1 + name2 + var + 'pos' + str(int(self.epcount))
-            plt.title(name)
-            plt.savefig(self.filepath + '/' + name + '.png', bbox_inches='tight')
-            plt.close()
-        
-        # 0: gripper, 1: block0, 2: block1, 3: block2
-        for i in range(4):
-            if i == 0:
-                memory = np.stack(self.hand_memory)
-            elif i == 1:
-                memory = np.stack(self.obj_memory0)
-            elif i == 2:
-                memory = np.stack(self.obj_memory1)
-            elif i == 3:
-                memory = np.stack(self.obj_memory2)
-            x = memory[:,0]
-            y = memory[:,1]
-            if i != 0:
-                y -= 0.6
-            z = memory[:,2]
-            draw(i, x, y, 'X', 'Y')
-            if i == 0:
-                draw(i, x, z, 'X', 'Z')
-                draw(i, y, z, 'Y', 'Z')
                 
-                
-    def save_block_interaction(self):
-        '''Saves the block interaction (i.e. distance between gripper and block for each block) for an episode.'''
-        name = 'GripperBlockDistance' + str(int(self.epcount))
-        fig = plt.figure()
-        plt.plot(self.block0_interaction, "-b", label="block0", linewidth=0.5)
-        plt.plot(self.block1_interaction, "-r", label="block1", linewidth=0.5)
-        plt.plot(self.block2_interaction, "-m", label="block2", linewidth=0.5)
-        fig.suptitle(name)
-        plt.xlabel('Step')
-        plt.ylabel('Distance')
-        plt.legend(loc="upper right")
-        plt.savefig(self.filepath + '/' + name + '.png')
-        plt.close()

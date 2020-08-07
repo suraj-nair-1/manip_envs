@@ -447,9 +447,9 @@ class Tabletop(SawyerXYZEnv):
             goal_pos = np.concatenate((gripper_pos, block_0_pos, block_1_pos, block_2_pos))
         
         if self.door or self.drawer:
-            goal_img = self.save_goal_img(None, goal_pos, 0, angle=angle)
+            goal_img = self.save_goal_img(goal_pos, angle=angle)
         else:
-            goal_img = self.save_goal_img(None, goal_pos, 0)
+            goal_img = self.save_goal_img(goal_pos)
         return goal_img
     
     def take_steps_and_render(self, obs, actions, set_qpos=None):
@@ -510,7 +510,7 @@ class Tabletop(SawyerXYZEnv):
         '''For resetting the env without having to call reset() (i.e. without updating episode count)'''
         self.reset_model(just_restore=True)
 
-    def save_goal_img(self, PATH, goal, eps, actions=None, angle=None):
+    def save_goal_img(self, goal, actions=None, angle=None):
         '''Returns image with a given goal array of positions for the gripper and blocks.'''
         if self.drawer:
             goal[:3] = self.data.get_site_xpos('handleStart')

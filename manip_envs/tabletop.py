@@ -365,11 +365,6 @@ class Tabletop(SawyerXYZEnv):
                 block_1_pos = [-0.12, 0.6, 0.075]
                 block_2_pos = [0.25, 0.4, 0.075]
             gripper_pos = self.sim.data.get_geom_xpos('handle')
-            if block is not None:
-                block_1_pos[:2] += np.random.uniform(-.05, 0.05, (2,))
-                gripper_pos = block_1_pos.copy()
-                gripper_pos[:2] += np.random.uniform(-0.02, 0.02, (2,))
-                gripper_pos[-1] += np.random.uniform(-0.01, 0.01, (1,))
             self.data.qpos[-1] = angle
             if self.door != 5:
                 goal_pos = np.concatenate([gripper_pos, block_0_pos, block_1_pos, block_2_pos])

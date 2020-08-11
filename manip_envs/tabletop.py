@@ -490,7 +490,7 @@ class Tabletop(SawyerXYZEnv):
                 door_vel = np.array([0.])
                 self.sim.data.set_joint_qvel('doorjoint', door_vel)
             elif self.drawer:
-                self.data.qpos[-1] = angle
+                self.data.qpos[-1] = obs[-1]
                 door_vel = np.array([0.])
                 self.sim.data.set_joint_qvel('handle', door_vel)
         self._reset_hand(pos=obs[:3])

@@ -1,6 +1,7 @@
 *.pyc
 *.DS_Store
 *__pycache__
+*egg-info
 manip_envs/.ipynb_checkpoints/
 expert/
 .ipynb_checkpoints/

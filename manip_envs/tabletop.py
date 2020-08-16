@@ -121,40 +121,54 @@ class Tabletop(SawyerXYZEnv):
         return filename
 
     def _get_low_dim_info(self):
-        env_info =  {'block0_x': self.data.qpos[9], 
-                    'block0_y': self.data.qpos[10], 
-                    'block0_z': self.data.qpos[11], 
-                    'block1_x': self.data.qpos[12], 
-                    'block1_y': self.data.qpos[13], 
-                    'block1_z': self.data.qpos[14], 
-                    'block2_x': self.data.qpos[15], 
-                    'block2_y': self.data.qpos[16], 
-                    'block2_z': self.data.qpos[17], 
-                    'hand_x': self.get_endeff_pos()[0],
-                    'hand_y': self.get_endeff_pos()[1],
-                    'hand_z': self.get_endeff_pos()[2],
-                    'dist': - self.compute_reward()}
+        if not (self.door or self.drawer):
+            env_info =  {'block0_x': self.data.qpos[9], 
+                        'block0_y': self.data.qpos[10], 
+                        'block0_z': self.data.qpos[11], 
+                        'block1_x': self.data.qpos[12], 
+                        'block1_y': self.data.qpos[13], 
+                        'block1_z': self.data.qpos[14], 
+                        'block2_x': self.data.qpos[15], 
+                        'block2_y': self.data.qpos[16], 
+                        'block2_z': self.data.qpos[17], 
+                        'hand_x': self.get_endeff_pos()[0],
+                        'hand_y': self.get_endeff_pos()[1],
+                        'hand_z': self.get_endeff_pos()[2],
+                        'dist': - self.compute_reward()}
         
-        if self.door == 1 or self.door == 3:
-            env_info['door'] = self.data.qpos[-1]
-        elif self.door == 5:
-            env_info['door'] = self.data.qpos[-1]
-            env_info['block3_x'] = self.data.qpos[18]
-            env_info['block3_y'] = self.data.qpos[19]
-            env_info['block3_z'] = self.data.qpos[20]
-            env_info['block4_x'] = self.data.qpos[21]
-            env_info['block4_y'] = self.data.qpos[22]
-            env_info['block4_z'] = self.data.qpos[23] 
-        elif self.drawer:
-            env_info['block3_x'] = self.data.qpos[18]
-            env_info['block3_y'] = self.data.qpos[19] 
-            env_info['block3_z'] = self.data.qpos[20] 
-            env_info['block4_x'] = self.data.qpos[21] 
-            env_info['block4_y'] = self.data.qpos[22] 
-            env_info['block4_z'] = self.data.qpos[23] 
-            env_info['block5_x'] = self.data.qpos[24] 
-            env_info['block5_y'] =  self.data.qpos[25] 
-            env_info['block5_z'] = self.data.qpos[26] 
+        else:
+            env_info =  {'block0_x': self.data.qpos[9], 
+                        'block0_y': self.data.qpos[10], 
+                        'block0_z': self.data.qpos[11], 
+                        'block1_x': self.data.qpos[16], 
+                        'block1_y': self.data.qpos[17], 
+                        'block1_z': self.data.qpos[18], 
+                        'block2_x': self.data.qpos[23], 
+                        'block2_y': self.data.qpos[24], 
+                        'block2_z': self.data.qpos[25], 
+                        'hand_x': self.get_endeff_pos()[0],
+                        'hand_y': self.get_endeff_pos()[1],
+                        'hand_z': self.get_endeff_pos()[2],
+                        'dist': - self.compute_reward()}
+            if self.door:
+                env_info['door'] = self.data.qpos[-1]
+        if self.door == 5:
+            env_info['block3_x'] = self.data.qpos[30]
+            env_info['block3_y'] = self.data.qpos[31]
+            env_info['block3_z'] = self.data.qpos[32]
+            env_info['block4_x'] = self.data.qpos[37]
+            env_info['block4_y'] = self.data.qpos[38]
+            env_info['block4_z'] = self.data.qpos[39] 
+        if self.drawer:
+            env_info['block3_x'] = self.data.qpos[30]
+            env_info['block3_y'] = self.data.qpos[31] 
+            env_info['block3_z'] = self.data.qpos[32] 
+            env_info['block4_x'] = self.data.qpos[37] 
+            env_info['block4_y'] = self.data.qpos[38] 
+            env_info['block4_z'] = self.data.qpos[39] 
+            env_info['block5_x'] = self.data.qpos[44] 
+            env_info['block5_y'] =  self.data.qpos[45] 
+            env_info['block5_z'] = self.data.qpos[46] 
             env_info['drawer'] = self.data.qpos[-1]
         return env_info
 
@@ -470,12 +484,13 @@ class Tabletop(SawyerXYZEnv):
                 for i in range(obj_num):
                     self.targetobj = i
                     if self.door or self.drawer: 
+                        # init_pos = obs[(i+1)*3:((i+1)*3)+3]
                         self.obj_init_pos = obs[(i+1)*3:((i+1)*3)+3]
                         self._set_obj_xyz(self.obj_init_pos)
                     else:
                         self.obj_init_pos = obs[(i+1)*3:((i+1)*3)+2]
                         self._set_obj_xyz(self.obj_init_pos)
-                if self.door == 0:
+                if not (self.door or self.drawer):
                     error = np.linalg.norm(obs[3:12] - self.data.qpos[9:18])
                     repeat = (error >= threshold)
                     _iters += 1
@@ -491,8 +506,6 @@ class Tabletop(SawyerXYZEnv):
                 self.sim.data.set_joint_qvel('doorjoint', door_vel)
             elif self.drawer:
                 self.data.qpos[-1] = obs[-1]
-                door_vel = np.array([0.])
-                self.sim.data.set_joint_qvel('handle', door_vel)
         self._reset_hand(pos=obs[:3])
         imgs = []
         im = self.sim.render(64, 64, camera_name='cam0')
